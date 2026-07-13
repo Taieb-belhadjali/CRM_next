@@ -1,0 +1,29 @@
+import dbConnect from "@/lib/mongodb";
+import User from "@/models/User";
+import { getAuthUser } from "@/lib/auth";
+import { withCors, handlePreflight } from "@/lib/cors";
+
+export async function GET(request) {
+  const authUser = getAuthUser(request);
+
+  if (!authUser) {
+    return withCors(
+      Response.json({ error: "Unauthorized" }, { status: 401 })
+    );
+  }
+
+  await dbConnect();
+  const user = await User.findById(authUser.sub).select("-passwordHash");
+
+  if (!user) {
+    return withCors(
+      Response.json({ error: "User not found" }, { status: 404 })
+    );
+  }
+
+  return withCors(Response.json({ user }));
+}
+
+export async function OPTIONS() {
+  return handlePreflight();
+}
