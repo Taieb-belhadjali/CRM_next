@@ -101,6 +101,21 @@ export function changeUserRole(token: string, userId: string, role: "admin" | "c
   );
 }
 
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+  role?: "admin" | "commercial";
+  isActive?: boolean;
+}
+
+export function updateUser(token: string, userId: string, payload: UpdateUserPayload) {
+  return request<{ user: AdminUser }>(
+    `/api/admin/users/${userId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+    token
+  );
+}
+
 export function deleteUser(token: string, userId: string) {
   return request<{ message: string }>(
     `/api/admin/users/${userId}`,

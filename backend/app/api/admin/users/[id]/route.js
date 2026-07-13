@@ -32,6 +32,18 @@ export async function PATCH(request, { params }) {
   const allowed = {};
   if (typeof body.isActive === "boolean") allowed.isActive = body.isActive;
   if (body.role === "admin" || body.role === "commercial") allowed.role = body.role;
+  if (typeof body.name === "string" && body.name.trim()) allowed.name = body.name.trim();
+  if (typeof body.email === "string" && body.email.trim()) {
+    const newEmail = body.email.trim().toLowerCase();
+    // Check email isn't already taken by another user
+    const conflict = await User.findOne({ email: newEmail, _id: { $ne: id } });
+    if (conflict) {
+      return withCors(
+        Response.json({ error: "Email already in use by another account." }, { status: 409 })
+      );
+    }
+    allowed.email = newEmail;
+  }
 
   const user = await User.findByIdAndUpdate(id, allowed, { new: true }).select("-passwordHash");
 
