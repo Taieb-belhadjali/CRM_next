@@ -1,0 +1,235 @@
+import { useState } from "react";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router";
+import {
+  LayoutDashboard,
+  Users,
+  Contact,
+  Building2,
+  Handshake,
+  CheckSquare,
+  Calendar,
+  Phone,
+  Video,
+  Ticket,
+  Search,
+  Settings,
+  LogOut,
+  Bell,
+  Zap,
+  UserPlus,
+} from "lucide-react";
+import { useAuth } from "./hooks/useAuth";
+
+const NAV_ITEMS = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/prospects", label: "Prospects", icon: UserPlus },
+  { to: "/contacts", label: "Contacts", icon: Contact },
+  { to: "/accounts", label: "Accounts", icon: Building2 },
+  { to: "/deals", label: "Deals", icon: Handshake },
+  { to: "/tasks", label: "Tasks", icon: CheckSquare },
+  { to: "/calendar", label: "Calendar", icon: Calendar },
+  { to: "/calls", label: "Calls", icon: Phone },
+  { to: "/meetings", label: "Meetings", icon: Video },
+  { to: "/tickets", label: "Tickets", icon: Ticket },
+];
+
+const NAV_SYSTEM = [
+  { to: "/search", label: "Search", icon: Search },
+  { to: "/settings", label: "Settings", icon: Settings },
+];
+
+const NAV_ADMIN = [
+  { to: "/admin/users", label: "Users", icon: Users },
+];
+
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Dashboard",
+  "/prospects": "Prospects",
+  "/contacts": "Contacts",
+  "/accounts": "Accounts",
+  "/deals": "Deals",
+  "/tasks": "Tasks",
+  "/calendar": "Calendar",
+  "/calls": "Calls",
+  "/meetings": "Meetings",
+  "/tickets": "Tickets",
+  "/search": "Search",
+  "/settings": "Settings",
+  "/admin/users": "User Management",
+};
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
+
+export default function Layout() {
+  const [searchValue, setSearchValue] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const pageTitle = PAGE_TITLES[location.pathname] ?? "Dashboard";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const initials = user ? getInitials(user.name) : "?";
+  const roleLabel = user?.role === "admin" ? "Admin" : "Commercial";
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-zinc-50 font-[Inter,sans-serif]">
+      {/* Sidebar */}
+      <aside className="w-60 min-w-60 h-full bg-zinc-900 flex flex-col overflow-hidden">
+        <div className="px-5 py-5 border-b border-zinc-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center">
+              <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+            </div>
+            <span className="text-white font-semibold text-sm tracking-tight">PulseCRM</span>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto scrollbar-none">
+          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-zinc-800 text-white"
+                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-blue-400" : ""}`} strokeWidth={1.75} />
+                  {label}
+                  {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                </>
+              )}
+            </NavLink>
+          ))}
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] uppercase tracking-widest text-zinc-600 font-medium mb-1">System</p>
+          </div>
+
+          {NAV_SYSTEM.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-zinc-800 text-white"
+                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-blue-400" : ""}`} strokeWidth={1.75} />
+                  {label}
+                  {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                </>
+              )}
+            </NavLink>
+          ))}
+
+          {/* Admin-only section */}
+          {user?.role === "admin" && (
+            <>
+              <div className="pt-3 pb-1">
+                <p className="px-3 text-[10px] uppercase tracking-widest text-zinc-600 font-medium mb-1">Admin</p>
+              </div>
+              {NAV_ADMIN.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      isActive
+                        ? "bg-zinc-800 text-white"
+                        : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-blue-400" : ""}`} strokeWidth={1.75} />
+                      {label}
+                      {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </>
+          )}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-zinc-800">
+          <div className="flex items-center gap-3 px-2 py-2">
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate leading-none mb-1">{user?.name ?? "—"}</p>
+              <span className="inline-flex items-center text-[10px] bg-blue-500/20 text-blue-300 rounded px-1.5 py-0.5 font-medium">
+                {roleLabel}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              <LogOut className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-14 bg-white border-b border-zinc-200 flex items-center px-8 gap-4 flex-shrink-0">
+          <h1 className="text-zinc-900 font-semibold text-base whitespace-nowrap">{pageTitle}</h1>
+          <div className="flex-1 flex justify-center">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+              <input
+                type="text"
+                placeholder="Search contacts, deals, accounts…"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="relative p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-zinc-700 transition-colors">
+              <Bell className="w-4 h-4" strokeWidth={1.75} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+            </button>
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-semibold">
+              {initials}
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-8">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
