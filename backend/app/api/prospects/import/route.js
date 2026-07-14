@@ -2,15 +2,8 @@ import dbConnect from "@/lib/mongodb";
 import Prospect from "@/models/Prospect";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
-/**
- * POST /api/prospects/import
- * Body: { rows: Array<object> }  — parsed CSV rows from the frontend (papaparse)
- *
- * Expected row keys (all optional except firstName + lastName):
- *   firstName, lastName, company, jobTitle, email, phone, address,
- *   status, tags (comma-separated string), source
- */
 export async function POST(request) {
   const auth = getAuthUser(request);
   if (!auth) {
@@ -36,7 +29,6 @@ export async function POST(request) {
       errors.push({ row: i + 1, error: "firstName and lastName are required" });
       continue;
     }
-
     valid.push({
       firstName: r.firstName.trim(),
       lastName: r.lastName.trim(),
@@ -48,12 +40,7 @@ export async function POST(request) {
       status: ["new", "contacted", "qualified", "converted", "unqualified"].includes(r.status)
         ? r.status
         : "new",
-      tags: r.tags
-        ? r.tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : [],
+      tags: r.tags ? r.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
       source: "import",
       owner: auth.sub,
     });
@@ -61,13 +48,15 @@ export async function POST(request) {
 
   const inserted = await Prospect.insertMany(valid, { ordered: false });
 
-  return withCors(
-    Response.json({
-      inserted: inserted.length,
-      skipped: errors.length,
-      errors,
-    })
-  );
+  logActivity({
+    auth,
+    request,
+    action: "prospect_import",
+    entity: "prospect",
+    meta: { inserted: inserted.length, skipped: errors.length },
+  });
+
+  return withCors(Response.json({ inserted: inserted.length, skipped: errors.length, errors }));
 }
 
 export async function OPTIONS() {

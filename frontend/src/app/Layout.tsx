@@ -19,6 +19,7 @@ import {
   UserPlus,
   Menu,
   X,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 
@@ -40,7 +41,10 @@ const NAV_SYSTEM = [
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
-const NAV_ADMIN = [{ to: "/admin/users", label: "Users", icon: Users }];
+const NAV_ADMIN = [
+  { to: "/admin/users",    label: "Users",         icon: Users },
+  { to: "/admin/activity", label: "Activity Log",  icon: Activity },
+];
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -55,7 +59,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/tickets": "Tickets",
   "/search": "Search",
   "/settings": "Settings",
-  "/admin/users": "User Management",
+  "/admin/users":    "User Management",
+  "/admin/activity": "Activity Log",
 };
 
 function getInitials(name: string) {

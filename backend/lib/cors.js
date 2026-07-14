@@ -1,16 +1,20 @@
-// Centralized CORS handling for the API-only backend.
-// The frontend runs on a different origin (Vite dev server), so every
-// API route needs these headers, and OPTIONS preflight requests must
-// be answered directly.
-
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "http://localhost:5173";
+const IS_DEV = process.env.NODE_ENV !== "production";
+
+// In dev, use a wildcard so any localhost port works without changing env vars.
+// In production, restrict to the configured FRONTEND_URL.
+function getAllowedOrigin() {
+  return IS_DEV ? "*" : ALLOWED_ORIGIN;
+}
 
 export function corsHeaders() {
+  const origin = getAllowedOrigin();
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Logout",
+    // Cannot use credentials with wildcard origin — only needed in production
+    ...(IS_DEV ? {} : { "Access-Control-Allow-Credentials": "true" }),
   };
 }
 
@@ -22,7 +26,6 @@ export function withCors(response) {
   return response;
 }
 
-// Use in a route's OPTIONS export to answer preflight requests.
-export function handlePreflight() {
+export function handlePreflight(request) {
   return new Response(null, { status: 204, headers: corsHeaders() });
 }

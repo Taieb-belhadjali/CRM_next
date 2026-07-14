@@ -2,12 +2,13 @@ import dbConnect from "@/lib/mongodb";
 import Account from "@/models/Account";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauth() {
   return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
 }
 
-/** GET /api/accounts?search=&page=&limit=&status= */
+/** GET /api/accounts */
 export async function GET(request) {
   const auth = getAuthUser(request);
   if (!auth) return unauth();
@@ -66,6 +67,16 @@ export async function POST(request) {
   });
 
   const populated = await account.populate("owner", "name email");
+
+  logActivity({
+    auth,
+    request,
+    action: "account_create",
+    entity: "account",
+    entityId: account._id,
+    entityLabel: name.trim(),
+  });
+
   return withCors(Response.json({ account: populated }, { status: 201 }));
 }
 

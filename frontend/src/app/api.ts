@@ -394,3 +394,290 @@ export function exportProspectsUrl(
   if (params.owner) q.set("owner", params.owner);
   return `${BASE}/api/prospects/export?${q}`;
 }
+
+// ── Activity log ──────────────────────────────────────────────────────────────
+
+export interface ActivityLogEntry {
+  _id: string;
+  user: string | null;
+  userName: string | null;
+  userEmail: string | null;
+  action: string;
+  entity: string | null;
+  entityId: string | null;
+  entityLabel: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  meta: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export function listActivity(
+  token: string,
+  params: {
+    page?: number;
+    limit?: number;
+    user?: string;
+    action?: string;
+    entity?: string;
+    search?: string;
+  } = {}
+) {
+  const q = new URLSearchParams();
+  if (params.page)   q.set("page",   String(params.page));
+  if (params.limit)  q.set("limit",  String(params.limit));
+  if (params.user)   q.set("user",   params.user);
+  if (params.action) q.set("action", params.action);
+  if (params.entity) q.set("entity", params.entity);
+  if (params.search) q.set("search", params.search);
+  return request<{ logs: ActivityLogEntry[]; total: number; page: number; limit: number }>(
+    `/api/admin/activity?${q}`,
+    {},
+    token
+  );
+}
+
+// ── Deals ─────────────────────────────────────────────────────────────────────
+
+export type DealStage = "prospection" | "proposition" | "negociation" | "gagne" | "perdu";
+
+export interface Deal {
+  _id: string;
+  title: string;
+  stage: DealStage;
+  value: number;
+  order: number;
+  account?: { _id: string; name: string } | null;
+  contacts?: { _id: string; firstName: string; lastName: string; email?: string }[];
+  owner?: OwnerRef;
+  expectedCloseDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DealPayload {
+  title: string;
+  stage?: DealStage;
+  value?: number;
+  account?: string | null;
+  contacts?: string[];
+  expectedCloseDate?: string | null;
+  order?: number;
+}
+
+export function listDeals(token: string, params: PaginatedParams & { stage?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.search) q.set("search", params.search);
+  if (params.page)   q.set("page",   String(params.page));
+  if (params.limit)  q.set("limit",  String(params.limit));
+  if (params.stage)  q.set("stage",  params.stage);
+  return request<{ deals: Deal[]; total: number; page: number; limit: number }>(`/api/deals?${q}`, {}, token);
+}
+export function createDeal(token: string, payload: DealPayload) {
+  return request<{ deal: Deal }>("/api/deals", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateDeal(token: string, id: string, payload: Partial<DealPayload>) {
+  return request<{ deal: Deal }>(`/api/deals/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteDeal(token: string, id: string) {
+  return request<{ message: string }>(`/api/deals/${id}`, { method: "DELETE" }, token);
+}
+export function reorderDeals(token: string, updates: { id: string; stage: DealStage; order: number }[]) {
+  return request<{ ok: boolean }>("/api/deals/reorder", { method: "PATCH", body: JSON.stringify({ updates }) }, token);
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+
+export type TaskStatus   = "todo" | "in_progress" | "done";
+export type TaskPriority = "low" | "medium" | "high";
+
+export interface Task {
+  _id: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  assignee?: OwnerRef | null;
+  relatedTo?: string | null;
+  relatedToModel?: "Prospect" | "Contact" | "Account" | "Deal" | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskPayload {
+  title: string;
+  description?: string;
+  dueDate?: string | null;
+  priority?: TaskPriority;
+  status?: TaskStatus;
+  assignee?: string | null;
+  relatedTo?: string | null;
+  relatedToModel?: string | null;
+}
+
+export function listTasks(token: string, params: PaginatedParams & { status?: string; priority?: string; assignee?: string; relatedTo?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.search)    q.set("search",    params.search);
+  if (params.page)      q.set("page",      String(params.page));
+  if (params.limit)     q.set("limit",     String(params.limit));
+  if (params.status)    q.set("status",    params.status);
+  if (params.priority)  q.set("priority",  params.priority);
+  if (params.assignee)  q.set("assignee",  params.assignee);
+  if (params.relatedTo) q.set("relatedTo", params.relatedTo);
+  return request<{ tasks: Task[]; total: number; page: number; limit: number }>(`/api/tasks?${q}`, {}, token);
+}
+export function createTask(token: string, payload: TaskPayload) {
+  return request<{ task: Task }>("/api/tasks", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateTask(token: string, id: string, payload: Partial<TaskPayload>) {
+  return request<{ task: Task }>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteTask(token: string, id: string) {
+  return request<{ message: string }>(`/api/tasks/${id}`, { method: "DELETE" }, token);
+}
+
+// ── Calls ─────────────────────────────────────────────────────────────────────
+
+export type CallStatus    = "scheduled" | "completed" | "missed" | "cancelled";
+export type CallDirection = "inbound" | "outbound";
+
+export interface Call {
+  _id: string;
+  subject: string;
+  direction: CallDirection;
+  status: CallStatus;
+  durationMinutes: number;
+  scheduledAt?: string;
+  notes?: string;
+  relatedTo?: string | null;
+  relatedToModel?: "Contact" | "Prospect" | "Deal" | null;
+  owner?: OwnerRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CallPayload {
+  subject: string;
+  direction?: CallDirection;
+  status?: CallStatus;
+  durationMinutes?: number;
+  scheduledAt?: string | null;
+  notes?: string;
+  relatedTo?: string | null;
+  relatedToModel?: string | null;
+}
+
+export function listCalls(token: string, params: PaginatedParams & { status?: string; direction?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.page)      q.set("page",      String(params.page));
+  if (params.limit)     q.set("limit",     String(params.limit));
+  if (params.status)    q.set("status",    params.status);
+  if (params.direction) q.set("direction", params.direction);
+  return request<{ calls: Call[]; total: number; page: number; limit: number }>(`/api/calls?${q}`, {}, token);
+}
+export function createCall(token: string, payload: CallPayload) {
+  return request<{ call: Call }>("/api/calls", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateCall(token: string, id: string, payload: Partial<CallPayload>) {
+  return request<{ call: Call }>(`/api/calls/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteCall(token: string, id: string) {
+  return request<{ message: string }>(`/api/calls/${id}`, { method: "DELETE" }, token);
+}
+
+// ── Meetings ──────────────────────────────────────────────────────────────────
+
+export interface Meeting {
+  _id: string;
+  title: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  location?: string;
+  meetingLink?: string;
+  notes?: string;
+  participants?: OwnerRef[];
+  relatedTo?: string | null;
+  relatedToModel?: string | null;
+  owner?: OwnerRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingPayload {
+  title: string;
+  scheduledAt: string;
+  durationMinutes?: number;
+  location?: string;
+  meetingLink?: string;
+  notes?: string;
+  participants?: string[];
+  relatedTo?: string | null;
+  relatedToModel?: string | null;
+}
+
+export function listMeetings(token: string, params: { page?: number; limit?: number; from?: string; to?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.page)  q.set("page",  String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.from)  q.set("from",  params.from);
+  if (params.to)    q.set("to",    params.to);
+  return request<{ meetings: Meeting[]; total: number; page: number; limit: number }>(`/api/meetings?${q}`, {}, token);
+}
+export function createMeeting(token: string, payload: MeetingPayload) {
+  return request<{ meeting: Meeting }>("/api/meetings", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateMeeting(token: string, id: string, payload: Partial<MeetingPayload>) {
+  return request<{ meeting: Meeting }>(`/api/meetings/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteMeeting(token: string, id: string) {
+  return request<{ message: string }>(`/api/meetings/${id}`, { method: "DELETE" }, token);
+}
+
+// ── Tickets ───────────────────────────────────────────────────────────────────
+
+export type TicketStatus   = "open" | "in_progress" | "resolved" | "closed";
+export type TicketPriority = "low" | "medium" | "high" | "urgent";
+
+export interface Ticket {
+  _id: string;
+  subject: string;
+  description?: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
+  account?: { _id: string; name: string } | null;
+  assignee?: OwnerRef | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketPayload {
+  subject: string;
+  description?: string;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  contact?: string | null;
+  account?: string | null;
+  assignee?: string | null;
+}
+
+export function listTickets(token: string, params: PaginatedParams & { status?: string; priority?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.search)   q.set("search",   params.search);
+  if (params.page)     q.set("page",     String(params.page));
+  if (params.limit)    q.set("limit",    String(params.limit));
+  if (params.status)   q.set("status",   params.status);
+  if (params.priority) q.set("priority", params.priority);
+  return request<{ tickets: Ticket[]; total: number; page: number; limit: number }>(`/api/tickets?${q}`, {}, token);
+}
+export function createTicket(token: string, payload: TicketPayload) {
+  return request<{ ticket: Ticket }>("/api/tickets", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateTicket(token: string, id: string, payload: Partial<TicketPayload>) {
+  return request<{ ticket: Ticket }>(`/api/tickets/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteTicket(token: string, id: string) {
+  return request<{ message: string }>(`/api/tickets/${id}`, { method: "DELETE" }, token);
+}

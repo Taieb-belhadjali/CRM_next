@@ -49,6 +49,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // Fire logout log — best-effort, don't await
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (t) {
+      const base = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+      fetch(`${base}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${t}`, "x-logout": "true" },
+      }).catch(() => {});
+    }
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);

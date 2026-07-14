@@ -3,12 +3,13 @@ import Account from "@/models/Account";
 import Contact from "@/models/Contact";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauth() {
   return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
 }
 
-/** GET /api/accounts/:id  — includes linked contacts */
+/** GET /api/accounts/:id */
 export async function GET(request, { params }) {
   const auth = getAuthUser(request);
   if (!auth) return unauth();
@@ -55,6 +56,16 @@ export async function PATCH(request, { params }) {
     return withCors(Response.json({ error: "Account not found" }, { status: 404 }));
   }
 
+  logActivity({
+    auth,
+    request,
+    action: "account_update",
+    entity: "account",
+    entityId: id,
+    entityLabel: account.name,
+    meta: { fields: Object.keys(allowed) },
+  });
+
   return withCors(Response.json({ account }));
 }
 
@@ -71,8 +82,16 @@ export async function DELETE(request, { params }) {
     return withCors(Response.json({ error: "Account not found" }, { status: 404 }));
   }
 
-  // Unlink contacts that referenced this account
   await Contact.updateMany({ account: id }, { $unset: { account: "" } });
+
+  logActivity({
+    auth,
+    request,
+    action: "account_delete",
+    entity: "account",
+    entityId: id,
+    entityLabel: account.name,
+  });
 
   return withCors(Response.json({ message: "Deleted." }));
 }

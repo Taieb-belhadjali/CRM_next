@@ -62,6 +62,25 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) 
 
 // ── Form ──────────────────────────────────────────────────────────────────────
 
+// ── Nominatim geocoder (OpenStreetMap, no API key) ────────────────────────────
+
+async function geocode(address: string): Promise<[number, number] | null> {
+  try {
+    const q = encodeURIComponent(address.trim());
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    if (!data?.length) return null;
+    return [parseFloat(data[0].lon), parseFloat(data[0].lat)]; // [lng, lat]
+  } catch {
+    return null;
+  }
+}
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+
 interface FormProps { initial?: Prospect | null; onSave: (p: Prospect) => void; onCancel: () => void; token: string; }
 
 function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
@@ -71,11 +90,34 @@ function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
     email: initial?.email ?? "", phone: initial?.phone ?? "",
     address: initial?.address ?? "", status: initial?.status ?? "new",
     tags: initial?.tags ?? [], source: initial?.source ?? "manual",
+    location: initial?.location ?? undefined,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const [geoStatus, setGeoStatus] = useState<"ok" | "fail" | null>(
+    initial?.location ? "ok" : null
+  );
+
   const set = (k: keyof ProspectPayload) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  // Geocode when user leaves the address field
+  const handleAddressBlur = async () => {
+    const addr = form.address?.trim();
+    if (!addr) return;
+    setGeocoding(true);
+    setGeoStatus(null);
+    const coords = await geocode(addr);
+    if (coords) {
+      setForm((p) => ({ ...p, location: { type: "Point", coordinates: coords } }));
+      setGeoStatus("ok");
+    } else {
+      setForm((p) => ({ ...p, location: undefined }));
+      setGeoStatus("fail");
+    }
+    setGeocoding(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +140,49 @@ function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
       <FormField label="Job title"><input className={inputCls} value={form.jobTitle ?? ""} onChange={set("jobTitle")} placeholder="CTO" /></FormField>
       <FormField label="Email"><input className={inputCls} type="email" value={form.email ?? ""} onChange={set("email")} placeholder="thomas@acme.com" /></FormField>
       <FormField label="Phone"><input className={inputCls} value={form.phone ?? ""} onChange={set("phone")} placeholder="+33 6 00 00 00 00" /></FormField>
-      <FormField label="Address"><input className={inputCls} value={form.address ?? ""} onChange={set("address")} placeholder="Berlin, Germany" /></FormField>
+
+      {/* Address with geocoding indicator */}
+      <FormField label="Address">
+        <div className="relative">
+          <input
+            className={inputCls}
+            value={form.address ?? ""}
+            onChange={(e) => {
+              set("address")(e);
+              setGeoStatus(null);
+              setForm((p) => ({ ...p, address: e.target.value, location: undefined }));
+            }}
+            onBlur={handleAddressBlur}
+            placeholder="Berlin, Germany"
+          />
+          {/* Status indicator — right side of input */}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+            {geocoding && (
+              <span className="w-3.5 h-3.5 border-2 border-zinc-300 border-t-blue-500 rounded-full animate-spin" />
+            )}
+            {!geocoding && geoStatus === "ok" && (
+              <span title="Location found" className="text-emerald-500">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
+                </svg>
+              </span>
+            )}
+            {!geocoding && geoStatus === "fail" && (
+              <span title="Location not found — prospect won't appear on map" className="text-amber-400">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </span>
+            )}
+          </div>
+        </div>
+        <p className="text-[11px] text-zinc-400 mt-1">
+          {geoStatus === "ok" && "Location found — this prospect will appear on the map."}
+          {geoStatus === "fail" && "Couldn't locate this address. Try being more specific (e.g. city, country)."}
+          {!geoStatus && "Leave the field to auto-locate the address for the map view."}
+        </p>
+      </FormField>
+
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Status">
           <select className={selectCls} value={form.status} onChange={set("status")}>
@@ -117,7 +201,7 @@ function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
-        <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
+        <button type="submit" disabled={loading || geocoding} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
           {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Create prospect"}
         </button>
       </div>

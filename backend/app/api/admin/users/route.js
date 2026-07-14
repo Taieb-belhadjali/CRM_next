@@ -3,16 +3,16 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauthorized(msg = "Unauthorized") {
   return withCors(Response.json({ error: msg }, { status: 401 }));
 }
-
 function forbidden(msg = "Forbidden") {
   return withCors(Response.json({ error: msg }, { status: 403 }));
 }
 
-/** GET /api/admin/users — list all users (admin only) */
+/** GET /api/admin/users */
 export async function GET(request) {
   const auth = getAuthUser(request);
   if (!auth) return unauthorized();
@@ -20,11 +20,10 @@ export async function GET(request) {
 
   await dbConnect();
   const users = await User.find({}).select("-passwordHash").sort({ createdAt: -1 });
-
   return withCors(Response.json({ users }));
 }
 
-/** POST /api/admin/users — create/invite a new user (admin only) */
+/** POST /api/admin/users */
 export async function POST(request) {
   const auth = getAuthUser(request);
   if (!auth) return unauthorized();
@@ -42,9 +41,7 @@ export async function POST(request) {
 
   const existing = await User.findOne({ email: email.toLowerCase() });
   if (existing) {
-    return withCors(
-      Response.json({ error: "Email already in use" }, { status: 409 })
-    );
+    return withCors(Response.json({ error: "Email already in use" }, { status: 409 }));
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -53,6 +50,16 @@ export async function POST(request) {
     email: email.toLowerCase(),
     passwordHash,
     role: role === "admin" ? "admin" : "commercial",
+  });
+
+  logActivity({
+    auth,
+    request,
+    action: "user_create",
+    entity: "user",
+    entityId: user._id,
+    entityLabel: user.name,
+    meta: { role: user.role },
   });
 
   return withCors(

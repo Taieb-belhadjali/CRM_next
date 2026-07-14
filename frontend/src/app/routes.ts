@@ -5,9 +5,16 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import StubPage from "./pages/StubPage";
 import UserManagement from "./pages/UserManagement";
+import ActivityLogPage from "./pages/ActivityLog";
 import Contacts from "./pages/Contacts";
 import Accounts from "./pages/Accounts";
 import Prospects from "./pages/Prospects";
+import Deals from "./pages/Deals";
+import Tasks from "./pages/Tasks";
+import CalendarPage from "./pages/CalendarPage";
+import Calls from "./pages/Calls";
+import Meetings from "./pages/Meetings";
+import Tickets from "./pages/Tickets";
 import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
 
 function makeStub(title: string, description: string) {
@@ -18,7 +25,7 @@ function makeStub(title: string, description: string) {
 
 export const router = createBrowserRouter([
   // Public
-  { path: "/login", Component: Login },
+  { path: "/login",    Component: Login },
   { path: "/register", Component: Register },
 
   // Authenticated
@@ -31,26 +38,28 @@ export const router = createBrowserRouter([
         children: [
           { index: true, Component: Dashboard },
 
-          // Sprint 2 — core entity modules
-          { path: "contacts", Component: Contacts },
-          { path: "accounts", Component: Accounts },
+          // Sprint 2
+          { path: "contacts",  Component: Contacts },
+          { path: "accounts",  Component: Accounts },
           { path: "prospects", Component: Prospects },
 
-          // Sprint 3+ stubs
-          { path: "deals",     Component: makeStub("Deals",    "Track deals across your pipeline from first touch to close.") },
-          { path: "tasks",     Component: makeStub("Tasks",    "Stay on top of your to-dos and follow-ups.") },
-          { path: "calendar",  Component: makeStub("Calendar", "View your meetings, calls, and scheduled activities.") },
-          { path: "calls",     Component: makeStub("Calls",    "Log and review call activity across your team.") },
-          { path: "meetings",  Component: makeStub("Meetings", "Schedule and track client meetings and demos.") },
-          { path: "tickets",   Component: makeStub("Tickets",  "Manage support tickets and customer issues.") },
-          { path: "search",    Component: makeStub("Search",   "Search across contacts, deals, accounts, and more.") },
-          { path: "settings",  Component: makeStub("Settings", "Configure your workspace, integrations, and preferences.") },
+          // Sprint 3
+          { path: "deals",    Component: Deals },
+          { path: "tasks",    Component: Tasks },
+          { path: "calendar", Component: CalendarPage },
+          { path: "calls",    Component: Calls },
+          { path: "meetings", Component: Meetings },
+          { path: "tickets",  Component: Tickets },
+
+          { path: "search",   Component: makeStub("Search",   "Global search coming soon.") },
+          { path: "settings", Component: makeStub("Settings", "Workspace settings coming soon.") },
 
           // Admin-only
           {
             Component: AdminRoute,
             children: [
-              { path: "admin/users", Component: UserManagement },
+              { path: "admin/users",    Component: UserManagement },
+              { path: "admin/activity", Component: ActivityLogPage },
             ],
           },
 

@@ -2,16 +2,16 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauthorized(msg = "Unauthorized") {
   return withCors(Response.json({ error: msg }, { status: 401 }));
 }
-
 function forbidden(msg = "Forbidden") {
   return withCors(Response.json({ error: msg }, { status: 403 }));
 }
 
-/** PATCH /api/admin/users/[id] — toggle isActive or update role */
+/** PATCH /api/admin/users/:id */
 export async function PATCH(request, { params }) {
   const auth = getAuthUser(request);
   if (!auth) return unauthorized();
@@ -20,7 +20,6 @@ export async function PATCH(request, { params }) {
   const { id } = await params;
   const body = await request.json();
 
-  // Prevent admin from deactivating their own account
   if (auth.sub === id && body.isActive === false) {
     return withCors(
       Response.json({ error: "You cannot deactivate your own account." }, { status: 400 })
@@ -35,7 +34,6 @@ export async function PATCH(request, { params }) {
   if (typeof body.name === "string" && body.name.trim()) allowed.name = body.name.trim();
   if (typeof body.email === "string" && body.email.trim()) {
     const newEmail = body.email.trim().toLowerCase();
-    // Check email isn't already taken by another user
     const conflict = await User.findOne({ email: newEmail, _id: { $ne: id } });
     if (conflict) {
       return withCors(
@@ -46,15 +44,24 @@ export async function PATCH(request, { params }) {
   }
 
   const user = await User.findByIdAndUpdate(id, allowed, { new: true }).select("-passwordHash");
-
   if (!user) {
     return withCors(Response.json({ error: "User not found" }, { status: 404 }));
   }
 
+  logActivity({
+    auth,
+    request,
+    action: "user_update",
+    entity: "user",
+    entityId: id,
+    entityLabel: user.name,
+    meta: { fields: Object.keys(allowed) },
+  });
+
   return withCors(Response.json({ user }));
 }
 
-/** DELETE /api/admin/users/[id] — remove a user */
+/** DELETE /api/admin/users/:id */
 export async function DELETE(request, { params }) {
   const auth = getAuthUser(request);
   if (!auth) return unauthorized();
@@ -74,6 +81,15 @@ export async function DELETE(request, { params }) {
   if (!user) {
     return withCors(Response.json({ error: "User not found" }, { status: 404 }));
   }
+
+  logActivity({
+    auth,
+    request,
+    action: "user_delete",
+    entity: "user",
+    entityId: id,
+    entityLabel: user.name,
+  });
 
   return withCors(Response.json({ message: "User deleted." }));
 }

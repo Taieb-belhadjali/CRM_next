@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import Contact from "@/models/Contact";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauth() {
   return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
@@ -54,6 +55,16 @@ export async function PATCH(request, { params }) {
     return withCors(Response.json({ error: "Contact not found" }, { status: 404 }));
   }
 
+  logActivity({
+    auth,
+    request,
+    action: "contact_update",
+    entity: "contact",
+    entityId: id,
+    entityLabel: `${contact.firstName} ${contact.lastName}`,
+    meta: { fields: Object.keys(allowed) },
+  });
+
   return withCors(Response.json({ contact }));
 }
 
@@ -69,6 +80,15 @@ export async function DELETE(request, { params }) {
   if (!contact) {
     return withCors(Response.json({ error: "Contact not found" }, { status: 404 }));
   }
+
+  logActivity({
+    auth,
+    request,
+    action: "contact_delete",
+    entity: "contact",
+    entityId: id,
+    entityLabel: `${contact.firstName} ${contact.lastName}`,
+  });
 
   return withCors(Response.json({ message: "Deleted." }));
 }

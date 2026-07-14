@@ -2,12 +2,13 @@ import dbConnect from "@/lib/mongodb";
 import Prospect from "@/models/Prospect";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauth() {
   return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
 }
 
-/** GET /api/prospects?search=&status=&tag=&owner=&page=&limit= */
+/** GET /api/prospects */
 export async function GET(request) {
   try {
     const auth = getAuthUser(request);
@@ -45,9 +46,7 @@ export async function GET(request) {
     return withCors(Response.json({ prospects, total, page, limit }));
   } catch (err) {
     console.error("GET /api/prospects error:", err);
-    return withCors(
-      Response.json({ error: "Something went wrong." }, { status: 500 })
-    );
+    return withCors(Response.json({ error: "Something went wrong." }, { status: 500 }));
   }
 }
 
@@ -58,10 +57,7 @@ export async function POST(request) {
     if (!auth) return unauth();
 
     const body = await request.json();
-    const {
-      firstName, lastName, company, jobTitle,
-      email, phone, address, source, status, tags, location,
-    } = body;
+    const { firstName, lastName, company, jobTitle, email, phone, address, source, status, tags, location } = body;
 
     if (!firstName || !lastName) {
       return withCors(
@@ -85,8 +81,6 @@ export async function POST(request) {
       owner: auth.sub,
     };
 
-    // Only set location when a fully-valid GeoJSON point is provided.
-    // Never store a partial {type:"Point"} — it breaks the 2dsphere index.
     if (
       location?.coordinates?.length === 2 &&
       typeof location.coordinates[0] === "number" &&
@@ -98,12 +92,19 @@ export async function POST(request) {
     const prospect = await Prospect.create(data);
     const populated = await prospect.populate("owner", "name email");
 
+    logActivity({
+      auth,
+      request,
+      action: "prospect_create",
+      entity: "prospect",
+      entityId: prospect._id,
+      entityLabel: `${firstName.trim()} ${lastName.trim()}`,
+    });
+
     return withCors(Response.json({ prospect: populated }, { status: 201 }));
   } catch (err) {
     console.error("POST /api/prospects error:", err);
-    return withCors(
-      Response.json({ error: "Something went wrong." }, { status: 500 })
-    );
+    return withCors(Response.json({ error: "Something went wrong." }, { status: 500 }));
   }
 }
 

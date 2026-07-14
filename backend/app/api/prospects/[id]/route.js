@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import Prospect from "@/models/Prospect";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauth() {
   return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
@@ -46,7 +47,6 @@ export async function PATCH(request, { params }) {
   ) {
     allowed.location = { type: "Point", coordinates: body.location.coordinates };
   } else if (body.location === null) {
-    allowed.location = undefined;
     allowed.$unset = { location: "" };
   }
 
@@ -60,6 +60,16 @@ export async function PATCH(request, { params }) {
   if (!prospect) {
     return withCors(Response.json({ error: "Prospect not found" }, { status: 404 }));
   }
+
+  logActivity({
+    auth,
+    request,
+    action: "prospect_update",
+    entity: "prospect",
+    entityId: id,
+    entityLabel: `${prospect.firstName} ${prospect.lastName}`,
+    meta: { fields: Object.keys(allowed) },
+  });
 
   return withCors(Response.json({ prospect }));
 }
@@ -76,6 +86,15 @@ export async function DELETE(request, { params }) {
   if (!prospect) {
     return withCors(Response.json({ error: "Prospect not found" }, { status: 404 }));
   }
+
+  logActivity({
+    auth,
+    request,
+    action: "prospect_delete",
+    entity: "prospect",
+    entityId: id,
+    entityLabel: `${prospect.firstName} ${prospect.lastName}`,
+  });
 
   return withCors(Response.json({ message: "Deleted." }));
 }
