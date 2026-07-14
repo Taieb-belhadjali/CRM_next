@@ -34,15 +34,15 @@ const ProspectSchema = new mongoose.Schema(
       trim: true,
     },
     // Simple [lng, lat] point for map view (Sprint 2)
+    // The entire field is omitted when no location is provided.
+    // The 2dsphere index is sparse so it skips documents without coordinates.
     location: {
       type: {
         type: String,
         enum: ["Point"],
-        default: "Point",
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        default: undefined,
       },
     },
     source: {
@@ -67,7 +67,7 @@ const ProspectSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-ProspectSchema.index({ location: "2dsphere" });
+ProspectSchema.index({ location: "2dsphere" }, { sparse: true });
 
 export default mongoose.models.Prospect ||
   mongoose.model("Prospect", ProspectSchema);
