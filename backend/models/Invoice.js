@@ -47,7 +47,7 @@ const InvoiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-InvoiceSchema.pre("save", async function (next) {
+InvoiceSchema.pre("save", async function () {
   if (!this.number) {
     const year = new Date().getFullYear();
     const count = await mongoose.models.Invoice.countDocuments();
@@ -64,11 +64,9 @@ InvoiceSchema.pre("save", async function (next) {
   this.subtotal   = Math.round(subtotal  * 100) / 100;
   this.taxTotal   = Math.round(taxTotal  * 100) / 100;
   this.grandTotal = Math.round((subtotal + taxTotal) * 100) / 100;
-  // Auto-set paidDate when status becomes paid
   if (this.isModified("status") && this.status === "paid" && !this.paidDate) {
     this.paidDate = new Date();
   }
-  next();
 });
 
 InvoiceSchema.index({ status: 1, createdAt: -1 });

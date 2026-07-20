@@ -1,17 +1,15 @@
 import dbConnect from "@/lib/mongodb";
 import Invoice from "@/models/Invoice";
 import { getAuthUser } from "@/lib/auth";
-import { corsHeaders, handlePreflight } from "@/lib/cors";
-import { buildDocDefinition, generatePdf } from "@/lib/pdf";
+import { withCors, handlePreflight } from "@/lib/cors";
+import { generatePdf } from "@/lib/pdf";
 
 /** GET /api/invoices/:id/pdf */
 export async function GET(request, { params }) {
   try {
     const auth = getAuthUser(request);
     if (!auth) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { "Content-Type": "application/json", ...corsHeaders() },
-      });
+      return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
     }
     const { id } = await params;
     await dbConnect();
@@ -22,24 +20,21 @@ export async function GET(request, { params }) {
       { path: "owner",   select: "name email" },
     ]);
     if (!invoice) {
-      return new Response(JSON.stringify({ error: "Invoice not found" }), {
-        status: 404, headers: { "Content-Type": "application/json", ...corsHeaders() },
-      });
+      return withCors(Response.json({ error: "Invoice not found" }, { status: 404 }));
     }
-    const docDef = buildDocDefinition(invoice.toObject(), "invoice");
-    const buffer = await generatePdf(docDef);
+    const buffer = await generatePdf(invoice.toObject(), "invoice");
 
-    const headers = {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${invoice.number}.pdf"`,
-      ...corsHeaders(),
-    };
-    return new Response(buffer, { status: 200, headers });
+    const res = new Response(buffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${invoice.number}.pdf"`,
+      },
+    });
+    return withCors(res);
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ error: "PDF generation failed." }), {
-      status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() },
-    });
+    return withCors(Response.json({ error: "PDF generation failed." }, { status: 500 }));
   }
 }
 

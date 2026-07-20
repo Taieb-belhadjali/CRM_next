@@ -46,7 +46,7 @@ const QuoteSchema = new mongoose.Schema(
 );
 
 // Auto-generate quote number and recompute totals before save
-QuoteSchema.pre("save", async function (next) {
+QuoteSchema.pre("save", async function () {
   // Generate number only on first save
   if (!this.number) {
     const year = new Date().getFullYear();
@@ -65,7 +65,6 @@ QuoteSchema.pre("save", async function (next) {
   this.subtotal   = Math.round(subtotal  * 100) / 100;
   this.taxTotal   = Math.round(taxTotal  * 100) / 100;
   this.grandTotal = Math.round((subtotal + taxTotal) * 100) / 100;
-  next();
 });
 
 QuoteSchema.index({ status: 1, createdAt: -1 });
