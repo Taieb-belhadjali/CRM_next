@@ -421,15 +421,19 @@ export function listActivity(
     action?: string;
     entity?: string;
     search?: string;
+    dateFrom?: string;
+    dateTo?: string;
   } = {}
 ) {
   const q = new URLSearchParams();
-  if (params.page)   q.set("page",   String(params.page));
-  if (params.limit)  q.set("limit",  String(params.limit));
-  if (params.user)   q.set("user",   params.user);
-  if (params.action) q.set("action", params.action);
-  if (params.entity) q.set("entity", params.entity);
-  if (params.search) q.set("search", params.search);
+  if (params.page)     q.set("page",     String(params.page));
+  if (params.limit)    q.set("limit",    String(params.limit));
+  if (params.user)     q.set("user",     params.user);
+  if (params.action)   q.set("action",   params.action);
+  if (params.entity)   q.set("entity",   params.entity);
+  if (params.search)   q.set("search",   params.search);
+  if (params.dateFrom) q.set("dateFrom", params.dateFrom);
+  if (params.dateTo)   q.set("dateTo",   params.dateTo);
   return request<{ logs: ActivityLogEntry[]; total: number; page: number; limit: number }>(
     `/api/admin/activity?${q}`,
     {},

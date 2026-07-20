@@ -155,7 +155,7 @@ function KanbanCard({
           {deal.account && (
             <p className="text-xs text-zinc-400 mt-0.5 truncate">{(deal.account as { name: string }).name}</p>
           )}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-zinc-100">
             <span className="text-xs font-semibold text-zinc-700">{fmt(deal.value)}</span>
             {deal.expectedCloseDate && (
               <span className="flex items-center gap-1 text-[10px] text-zinc-400">
@@ -382,22 +382,22 @@ export default function Deals() {
               <thead>
                 <tr className="border-b border-zinc-100">
                   <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Title</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Stage</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">Value</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Account</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Close date</th>
-                  <th className="px-5 py-3" />
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Stage</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden md:table-cell">Value</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Account</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Close date</th>
+                  <th className="px-5 py-3 border-l border-zinc-100" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
                 {deals.map((d) => (
                   <tr key={d._id} className="hover:bg-zinc-50 transition-colors">
                     <td className="px-5 py-3.5 font-medium text-zinc-800">{d.title}</td>
-                    <td className="px-5 py-3.5"><StageBadge stage={d.stage} /></td>
-                    <td className="px-5 py-3.5 text-zinc-600 hidden md:table-cell">{fmt(d.value)}</td>
-                    <td className="px-5 py-3.5 text-zinc-500 hidden lg:table-cell">{d.account ? (d.account as { name: string }).name : "—"}</td>
-                    <td className="px-5 py-3.5 text-zinc-500 hidden lg:table-cell">{d.expectedCloseDate ? new Date(d.expectedCloseDate).toLocaleDateString() : "—"}</td>
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="px-5 py-3.5 border-l border-zinc-100"><StageBadge stage={d.stage} /></td>
+                    <td className="px-5 py-3.5 text-zinc-600 border-l border-zinc-100 hidden md:table-cell">{fmt(d.value)}</td>
+                    <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">{d.account ? (d.account as { name: string }).name : "—"}</td>
+                    <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">{d.expectedCloseDate ? new Date(d.expectedCloseDate).toLocaleDateString() : "—"}</td>
+                    <td className="px-5 py-3.5 text-right border-l border-zinc-100">
                       <button onClick={() => setEditing(d)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"><Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
                       <button onClick={() => setDeleting(d)} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors ml-1"><Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
                     </td>
