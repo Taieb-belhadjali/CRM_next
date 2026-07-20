@@ -15,6 +15,8 @@ import CalendarPage from "./pages/CalendarPage";
 import Calls from "./pages/Calls";
 import Meetings from "./pages/Meetings";
 import Tickets from "./pages/Tickets";
+import Quotes from "./pages/Quotes";
+import Invoices from "./pages/Invoices";
 import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
 
 function makeStub(title: string, description: string) {
@@ -50,6 +52,10 @@ export const router = createBrowserRouter([
           { path: "calls",    Component: Calls },
           { path: "meetings", Component: Meetings },
           { path: "tickets",  Component: Tickets },
+
+          // Sprint 4
+          { path: "quotes",   Component: Quotes },
+          { path: "invoices", Component: Invoices },
 
           { path: "search",   Component: makeStub("Search",   "Global search coming soon.") },
           { path: "settings", Component: makeStub("Settings", "Workspace settings coming soon.") },

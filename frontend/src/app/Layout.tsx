@@ -20,6 +20,8 @@ import {
   Menu,
   X,
   Activity,
+  FileText,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 
@@ -34,6 +36,8 @@ const NAV_ITEMS = [
   { to: "/calls", label: "Calls", icon: Phone },
   { to: "/meetings", label: "Meetings", icon: Video },
   { to: "/tickets", label: "Tickets", icon: Ticket },
+  { to: "/quotes",   label: "Devis",    icon: FileText },
+  { to: "/invoices", label: "Factures", icon: Receipt },
 ];
 
 const NAV_SYSTEM = [
@@ -57,10 +61,14 @@ const PAGE_TITLES: Record<string, string> = {
   "/calls": "Calls",
   "/meetings": "Meetings",
   "/tickets": "Tickets",
+  "/quotes":   "Devis",
+  "/invoices": "Factures",
   "/search": "Search",
   "/settings": "Settings",
   "/admin/users":    "User Management",
   "/admin/activity": "Activity Log",
+  //"/quotes":   "Devis",
+  //"/invoices": "Factures",
 };
 
 function getInitials(name: string) {

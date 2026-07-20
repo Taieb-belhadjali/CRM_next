@@ -54,13 +54,20 @@ const ActivityLogSchema = new mongoose.Schema(
         "ticket_create",
         "ticket_update",
         "ticket_delete",
+        "quote_create",
+        "quote_update",
+        "quote_delete",
+        "quote_convert",
+        "invoice_create",
+        "invoice_update",
+        "invoice_delete",
       ],
     },
 
     // Which collection the action targets (null for auth actions)
     entity: {
       type: String,
-      enum: ["contact", "account", "prospect", "deal", "task", "call", "meeting", "ticket", "user", null],
+      enum: ["contact", "account", "prospect", "deal", "task", "call", "meeting", "ticket", "quote", "invoice", "user", null],
       default: null,
     },
 

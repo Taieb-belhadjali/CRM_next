@@ -681,3 +681,150 @@ export function updateTicket(token: string, id: string, payload: Partial<TicketP
 export function deleteTicket(token: string, id: string) {
   return request<{ message: string }>(`/api/tickets/${id}`, { method: "DELETE" }, token);
 }
+
+// ── Quotes ────────────────────────────────────────────────────────────────────
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected";
+
+export interface LineItem {
+  description: string;
+  quantity:    number;
+  unitPrice:   number;
+  taxRate:     number;
+  subtotal?:   number;
+  taxAmount?:  number;
+  total?:      number;
+}
+
+export interface Quote {
+  _id: string;
+  number: string;
+  title: string;
+  status: QuoteStatus;
+  issueDate?: string;
+  validUntil?: string;
+  lineItems: LineItem[];
+  subtotal:   number;
+  taxTotal:   number;
+  grandTotal: number;
+  notes?: string;
+  terms?: string;
+  invoiceId?: string | null;
+  deal?:    { _id: string; title: string } | null;
+  contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
+  account?: { _id: string; name: string } | null;
+  owner?:   OwnerRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuotePayload {
+  title: string;
+  status?: QuoteStatus;
+  issueDate?: string | null;
+  validUntil?: string | null;
+  deal?: string | null;
+  contact?: string | null;
+  account?: string | null;
+  lineItems?: LineItem[];
+  notes?: string;
+  terms?: string;
+}
+
+export function listQuotes(token: string, params: PaginatedParams & { status?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.search) q.set("search", params.search);
+  if (params.page)   q.set("page",   String(params.page));
+  if (params.limit)  q.set("limit",  String(params.limit));
+  if (params.status) q.set("status", params.status);
+  return request<{ quotes: Quote[]; total: number; page: number; limit: number }>(`/api/quotes?${q}`, {}, token);
+}
+export function getQuote(token: string, id: string) {
+  return request<{ quote: Quote }>(`/api/quotes/${id}`, {}, token);
+}
+export function createQuote(token: string, payload: QuotePayload) {
+  return request<{ quote: Quote }>("/api/quotes", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateQuote(token: string, id: string, payload: Partial<QuotePayload>) {
+  return request<{ quote: Quote }>(`/api/quotes/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteQuote(token: string, id: string) {
+  return request<{ message: string }>(`/api/quotes/${id}`, { method: "DELETE" }, token);
+}
+export function convertQuote(token: string, id: string, options: { dueDate?: string; paymentInfo?: string } = {}) {
+  return request<{ invoice: Invoice; quote: Quote }>(`/api/quotes/${id}/convert`, { method: "POST", body: JSON.stringify(options) }, token);
+}
+export function downloadPdf(token: string, type: "quote" | "invoice", id: string): Promise<Blob> {
+  const path = type === "quote" ? `/api/quotes/${id}/pdf` : `/api/invoices/${id}/pdf`;
+  return fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => {
+    if (!r.ok) throw new Error("PDF generation failed.");
+    return r.blob();
+  });
+}
+
+// ── Invoices ──────────────────────────────────────────────────────────────────
+
+export type InvoiceStatus = "draft" | "sent" | "unpaid" | "partial" | "paid" | "cancelled";
+
+export interface Invoice {
+  _id: string;
+  number: string;
+  title: string;
+  status: InvoiceStatus;
+  issueDate?: string;
+  dueDate?: string;
+  paidDate?: string;
+  paidAmount: number;
+  quoteId?: string | null;
+  lineItems: LineItem[];
+  subtotal:   number;
+  taxTotal:   number;
+  grandTotal: number;
+  notes?: string;
+  terms?: string;
+  paymentInfo?: string;
+  deal?:    { _id: string; title: string } | null;
+  contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
+  account?: { _id: string; name: string } | null;
+  owner?:   OwnerRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoicePayload {
+  title: string;
+  status?: InvoiceStatus;
+  issueDate?: string | null;
+  dueDate?: string | null;
+  paidDate?: string | null;
+  paidAmount?: number;
+  deal?: string | null;
+  contact?: string | null;
+  account?: string | null;
+  lineItems?: LineItem[];
+  notes?: string;
+  terms?: string;
+  paymentInfo?: string;
+}
+
+export function listInvoices(token: string, params: PaginatedParams & { status?: string; overdue?: boolean } = {}) {
+  const q = new URLSearchParams();
+  if (params.search)  q.set("search",  params.search);
+  if (params.page)    q.set("page",    String(params.page));
+  if (params.limit)   q.set("limit",   String(params.limit));
+  if (params.status)  q.set("status",  params.status);
+  if (params.overdue) q.set("overdue", "true");
+  return request<{ invoices: Invoice[]; total: number; page: number; limit: number }>(`/api/invoices?${q}`, {}, token);
+}
+export function getInvoice(token: string, id: string) {
+  return request<{ invoice: Invoice }>(`/api/invoices/${id}`, {}, token);
+}
+export function createInvoice(token: string, payload: InvoicePayload) {
+  return request<{ invoice: Invoice }>("/api/invoices", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateInvoice(token: string, id: string, payload: Partial<InvoicePayload>) {
+  return request<{ invoice: Invoice }>(`/api/invoices/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteInvoice(token: string, id: string) {
+  return request<{ message: string }>(`/api/invoices/${id}`, { method: "DELETE" }, token);
+}
