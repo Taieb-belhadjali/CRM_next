@@ -22,6 +22,9 @@ import {
   Activity,
   FileText,
   Receipt,
+  Package,
+  ShoppingCart,
+  Truck,
 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 
@@ -38,6 +41,9 @@ const NAV_ITEMS = [
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/quotes",   label: "Devis",    icon: FileText },
   { to: "/invoices", label: "Factures", icon: Receipt },
+  { to: "/orders",   label: "Orders",   icon: Package },
+  { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
+  { to: "/deliveries", label: "Deliveries", icon: Truck },
 ];
 
 const NAV_SYSTEM = [
@@ -63,6 +69,9 @@ const PAGE_TITLES: Record<string, string> = {
   "/tickets": "Tickets",
   "/quotes":   "Devis",
   "/invoices": "Factures",
+  "/orders": "Orders",
+  "/purchase-orders": "Purchase Orders",
+  "/deliveries": "Deliveries",
   "/search": "Search",
   "/settings": "Settings",
   "/admin/users":    "User Management",

@@ -832,3 +832,173 @@ export function updateInvoice(token: string, id: string, payload: Partial<Invoic
 export function deleteInvoice(token: string, id: string) {
   return request<{ message: string }>(`/api/invoices/${id}`, { method: "DELETE" }, token);
 }
+
+// ── Orders ─────────────────────────────────────────────────────────────────────
+
+export type OrderStatus = "pending" | "confirmed" | "fulfilled" | "cancelled";
+
+export interface Order {
+  _id: string;
+  number: string;
+  title: string;
+  status: OrderStatus;
+  sourceType?: "quote" | "invoice" | null;
+  sourceId?: string | null;
+  lineItems: LineItem[];
+  subtotal:   number;
+  taxTotal:   number;
+  grandTotal: number;
+  notes?: string;
+  terms?: string;
+  deal?:    { _id: string; title: string } | null;
+  contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
+  account?: { _id: string; name: string } | null;
+  owner?:   OwnerRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderPayload {
+  title: string;
+  status?: OrderStatus;
+  sourceType?: "quote" | "invoice" | null;
+  sourceId?: string | null;
+  deal?: string | null;
+  contact?: string | null;
+  account?: string | null;
+  lineItems?: LineItem[];
+  notes?: string;
+  terms?: string;
+}
+
+export function listOrders(token: string, params: PaginatedParams & { status?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.search) q.set("search", params.search);
+  if (params.page)   q.set("page",   String(params.page));
+  if (params.limit)  q.set("limit",  String(params.limit));
+  if (params.status) q.set("status", params.status);
+  return request<{ orders: Order[]; total: number; page: number; limit: number }>(`/api/orders?${q}`, {}, token);
+}
+export function getOrder(token: string, id: string) {
+  return request<{ order: Order }>(`/api/orders/${id}`, {}, token);
+}
+export function createOrder(token: string, payload: OrderPayload) {
+  return request<{ order: Order }>("/api/orders", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateOrder(token: string, id: string, payload: Partial<OrderPayload>) {
+  return request<{ order: Order }>(`/api/orders/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteOrder(token: string, id: string) {
+  return request<{ message: string }>(`/api/orders/${id}`, { method: "DELETE" }, token);
+}
+export function convertToOrder(token: string, sourceType: "quote" | "invoice", sourceId: string) {
+  return request<{ order: Order }>(`/api/${sourceType}s/${sourceId}/convert-to-order`, { method: "POST" }, token);
+}
+
+// ── Purchase Orders ────────────────────────────────────────────────────────────
+
+export type PurchaseOrderStatus = "pending" | "ordered" | "received" | "cancelled";
+
+export interface PurchaseOrder {
+  _id: string;
+  number: string;
+  title: string;
+  status: PurchaseOrderStatus;
+  supplier: string;
+  lineItems: LineItem[];
+  subtotal:   number;
+  taxTotal:   number;
+  grandTotal: number;
+  notes?: string;
+  deal?:    { _id: string; title: string } | null;
+  contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
+  account?: { _id: string; name: string } | null;
+  owner?:   OwnerRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PurchaseOrderPayload {
+  title: string;
+  status?: PurchaseOrderStatus;
+  supplier: string;
+  deal?: string | null;
+  contact?: string | null;
+  account?: string | null;
+  lineItems?: LineItem[];
+  notes?: string;
+}
+
+export function listPurchaseOrders(token: string, params: PaginatedParams & { status?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.search) q.set("search", params.search);
+  if (params.page)   q.set("page",   String(params.page));
+  if (params.limit)  q.set("limit",  String(params.limit));
+  if (params.status) q.set("status", params.status);
+  return request<{ purchaseOrders: PurchaseOrder[]; total: number; page: number; limit: number }>(`/api/purchase-orders?${q}`, {}, token);
+}
+export function getPurchaseOrder(token: string, id: string) {
+  return request<{ purchaseOrder: PurchaseOrder }>(`/api/purchase-orders/${id}`, {}, token);
+}
+export function createPurchaseOrder(token: string, payload: PurchaseOrderPayload) {
+  return request<{ purchaseOrder: PurchaseOrder }>("/api/purchase-orders", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updatePurchaseOrder(token: string, id: string, payload: Partial<PurchaseOrderPayload>) {
+  return request<{ purchaseOrder: PurchaseOrder }>(`/api/purchase-orders/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deletePurchaseOrder(token: string, id: string) {
+  return request<{ message: string }>(`/api/purchase-orders/${id}`, { method: "DELETE" }, token);
+}
+
+// ── Deliveries ────────────────────────────────────────────────────────────────
+
+export type DeliveryStatus = "preparing" | "shipped" | "delivered";
+
+export interface Delivery {
+  _id: string;
+  number: string;
+  orderId: string;
+  invoiceId?: string | null;
+  trackingNumber: string;
+  status: DeliveryStatus;
+  carrier?: string | null;
+  estimatedDelivery?: string | null;
+  deliveredAt?: string | null;
+  notes?: string | null;
+  order?: { _id: string; number: string; title: string } | null;
+  invoice?: { _id: string; number: string; title: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeliveryPayload {
+  orderId: string;
+  invoiceId?: string | null;
+  trackingNumber: string;
+  status?: DeliveryStatus;
+  carrier?: string | null;
+  estimatedDelivery?: string | null;
+  notes?: string | null;
+}
+
+export function listDeliveries(token: string, params: PaginatedParams & { status?: string; orderId?: string } = {}) {
+  const q = new URLSearchParams();
+  if (params.search) q.set("search", params.search);
+  if (params.page)   q.set("page",   String(params.page));
+  if (params.limit)  q.set("limit",  String(params.limit));
+  if (params.status) q.set("status", params.status);
+  if (params.orderId) q.set("orderId", params.orderId);
+  return request<{ deliveries: Delivery[]; total: number; page: number; limit: number }>(`/api/deliveries?${q}`, {}, token);
+}
+export function getDelivery(token: string, id: string) {
+  return request<{ delivery: Delivery }>(`/api/deliveries/${id}`, {}, token);
+}
+export function createDelivery(token: string, payload: DeliveryPayload) {
+  return request<{ delivery: Delivery }>("/api/deliveries", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+export function updateDelivery(token: string, id: string, payload: Partial<DeliveryPayload>) {
+  return request<{ delivery: Delivery }>(`/api/deliveries/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function deleteDelivery(token: string, id: string) {
+  return request<{ message: string }>(`/api/deliveries/${id}`, { method: "DELETE" }, token);
+}
