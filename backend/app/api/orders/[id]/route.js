@@ -63,6 +63,9 @@ export async function PATCH(request, { params }) {
       if (!existingDelivery) {
         const delivery = await Delivery.create({
           orderId: order._id,
+          invoiceId: order.invoiceId || undefined,
+          contact: order.contact || undefined,
+          account: order.account || undefined,
           status: "preparing",
         });
         logActivity({ auth, request, action: "delivery_create", entity: "delivery",

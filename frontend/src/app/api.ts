@@ -959,11 +959,18 @@ export interface Delivery {
   number: string;
   orderId: string;
   invoiceId?: string | null;
+  contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
+  account?: { _id: string; name: string } | null;
   trackingNumber: string;
+  deliveryAddress?: string | null;
   status: DeliveryStatus;
   carrier?: string | null;
   estimatedDelivery?: string | null;
   deliveredAt?: string | null;
+  lineItems: LineItem[];
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
   notes?: string | null;
   order?: { _id: string; number: string; title: string } | null;
   invoice?: { _id: string; number: string; title: string } | null;
@@ -974,10 +981,14 @@ export interface Delivery {
 export interface DeliveryPayload {
   orderId: string;
   invoiceId?: string | null;
+  contact?: string | null;
+  account?: string | null;
   trackingNumber: string;
+  deliveryAddress?: string | null;
   status?: DeliveryStatus;
   carrier?: string | null;
   estimatedDelivery?: string | null;
+  lineItems?: LineItem[];
   notes?: string | null;
 }
 

@@ -4,9 +4,9 @@ import {
 } from "lucide-react";
 import {
   listDeliveries, createDelivery, updateDelivery, deleteDelivery,
-  listOrders, listInvoices,
+  listOrders, listInvoices, listAccounts, listContacts,
   type Delivery, type DeliveryPayload, type DeliveryStatus,
-  type Order, type Invoice,
+  type Order, type Invoice, type Account, type Contact,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -15,6 +15,7 @@ import { Pagination } from "../components/shared/Pagination";
 import { SearchBar } from "../components/shared/SearchBar";
 import { DetailRow } from "../components/shared/DetailRow";
 import { FormField, inputCls, selectCls } from "../components/shared/FormField";
+import { LineItemEditor } from "../components/shared/LineItemEditor";
 
 const LIMIT = 25;
 
@@ -47,17 +48,21 @@ const TRANSITIONS: Record<DeliveryStatus, { label: string; next: DeliveryStatus;
   delivered: [{ label: "Remettre en préparation", next: "preparing", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
 };
 
-function DeliveryForm({ initial, orders, invoices, onSave, onCancel, token }: {
-  initial?: Delivery | null; orders: Order[]; invoices: Invoice[];
+function DeliveryForm({ initial, orders, invoices, accounts, contacts, onSave, onCancel, token }: {
+  initial?: Delivery | null; orders: Order[]; invoices: Invoice[]; accounts: Account[]; contacts: Contact[];
   onSave: (d: Delivery) => void; onCancel: () => void; token: string;
 }) {
   const [form, setForm] = useState<DeliveryPayload>({
     orderId:            initial?.orderId ?? "",
     invoiceId:          initial?.invoiceId ?? null,
+    contact:            (initial?.contact as { _id: string } | null | undefined)?._id ?? "",
+    account:            (initial?.account as { _id: string } | null | undefined)?._id ?? "",
     trackingNumber:     initial?.trackingNumber ?? "",
+    deliveryAddress:    initial?.deliveryAddress ?? "",
     status:             initial?.status ?? "preparing",
     carrier:            initial?.carrier ?? "",
     estimatedDelivery:  initial?.estimatedDelivery ? initial.estimatedDelivery.slice(0, 10) : "",
+    lineItems:          initial?.lineItems ?? [],
     notes:              initial?.notes ?? "",
   });
   const [loading, setLoading] = useState(false);
@@ -73,7 +78,12 @@ function DeliveryForm({ initial, orders, invoices, onSave, onCancel, token }: {
     if (!form.trackingNumber?.trim()) { setError("Le numéro de suivi est requis."); return; }
     setError(""); setLoading(true);
     try {
-      const payload = { ...form, estimatedDelivery: form.estimatedDelivery || null };
+      const payload = {
+        ...form,
+        account: form.account || null,
+        contact: form.contact || null,
+        estimatedDelivery: form.estimatedDelivery || null,
+      };
       const res = initial ? await updateDelivery(token, initial._id, payload) : await createDelivery(token, payload);
       onSave(res.delivery);
     } catch (err) { setError(err instanceof Error ? err.message : "Une erreur est survenue."); }
@@ -82,17 +92,36 @@ function DeliveryForm({ initial, orders, invoices, onSave, onCancel, token }: {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <FormField label="Commande" required>
-        <select className={selectCls} value={form.orderId} onChange={set("orderId")}>
-          <option value="">— Sélectionner —</option>
-          {orders.map((o) => <option key={o._id} value={o._id}>{o.number} – {o.title}</option>)}
-        </select>
-      </FormField>
-      <FormField label="Facture liée (optionnel)">
-        <select className={selectCls} value={form.invoiceId ?? ""} onChange={set("invoiceId")}>
-          <option value="">— Aucune —</option>
-          {invoices.map((inv) => <option key={inv._id} value={inv._id}>{inv.number} – {inv.title}</option>)}
-        </select>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Commande" required>
+          <select className={selectCls} value={form.orderId} onChange={set("orderId")}>
+            <option value="">— Sélectionner —</option>
+            {orders.map((o) => <option key={o._id} value={o._id}>{o.number} – {o.title}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Facture liée (optionnel)">
+          <select className={selectCls} value={form.invoiceId ?? ""} onChange={set("invoiceId")}>
+            <option value="">— Aucune —</option>
+            {invoices.map((inv) => <option key={inv._id} value={inv._id}>{inv.number} – {inv.title}</option>)}
+          </select>
+        </FormField>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Client (compte)">
+          <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
+            <option value="">— Aucun —</option>
+            {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Contact">
+          <select className={selectCls} value={form.contact ?? ""} onChange={set("contact")}>
+            <option value="">— Aucun —</option>
+            {contacts.map((c) => <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>)}
+          </select>
+        </FormField>
+      </div>
+      <FormField label="Adresse de livraison">
+        <textarea className={inputCls} rows={2} value={form.deliveryAddress ?? ""} onChange={set("deliveryAddress")} placeholder="Adresse complète de livraison…" />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
         <FormField label="N° de suivi" required>
@@ -112,6 +141,10 @@ function DeliveryForm({ initial, orders, invoices, onSave, onCancel, token }: {
         <FormField label="Livraison estimée">
           <input className={inputCls} type="date" value={form.estimatedDelivery ?? ""} onChange={set("estimatedDelivery")} />
         </FormField>
+      </div>
+      <div>
+        <p className="text-xs font-medium text-zinc-700 mb-2">Produits à livrer</p>
+        <LineItemEditor items={form.lineItems ?? []} onChange={(li) => setForm((p) => ({ ...p, lineItems: li }))} />
       </div>
       <FormField label="Notes">
         <textarea className={inputCls} rows={2} value={form.notes ?? ""} onChange={set("notes")} placeholder="Remarques…" />
@@ -144,6 +177,11 @@ function DeliveryDetail({ delivery, token, onEdit, onDelete, onUpdated }: {
     finally { setStatusLoading(false); }
   };
 
+  const accountName = (delivery.account as { name: string } | null | undefined)?.name;
+  const contactName = delivery.contact
+    ? `${(delivery.contact as { firstName: string; lastName: string }).firstName} ${(delivery.contact as { firstName: string; lastName: string }).lastName}`
+    : null;
+
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between pb-4 border-b border-zinc-100">
@@ -156,12 +194,18 @@ function DeliveryDetail({ delivery, token, onEdit, onDelete, onUpdated }: {
         <StatusBadge status={delivery.status} />
       </div>
       <div>
+        <DetailRow label="Client" value={accountName ?? contactName} />
+        <DetailRow label="Adresse" value={delivery.deliveryAddress} />
         <DetailRow label="N° de suivi" value={delivery.trackingNumber} />
         <DetailRow label="Transporteur" value={delivery.carrier} />
         <DetailRow label="Livraison estimée" value={fmtDate(delivery.estimatedDelivery)} />
         <DetailRow label="Livrée le" value={fmtDate(delivery.deliveredAt)} />
         {delivery.order && <DetailRow label="Commande" value={`${(delivery.order as { number: string }).number} – ${(delivery.order as { title: string }).title}`} />}
         {delivery.invoice && <DetailRow label="Facture" value={`${(delivery.invoice as { number: string }).number} – ${(delivery.invoice as { title: string }).title}`} />}
+      </div>
+      <div>
+        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-3">Produits à livrer</p>
+        <LineItemEditor items={delivery.lineItems ?? []} onChange={() => {}} readOnly />
       </div>
       {delivery.notes && <DetailRow label="Notes" value={delivery.notes} />}
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
@@ -207,6 +251,8 @@ export default function Deliveries() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [orders, setOrders]       = useState<Order[]>([]);
   const [invoices, setInvoices]   = useState<Invoice[]>([]);
+  const [accounts, setAccounts]   = useState<Account[]>([]);
+  const [contacts, setContacts]   = useState<Contact[]>([]);
   const refLoaded = useRef(false);
 
   useEffect(() => {
@@ -215,6 +261,8 @@ export default function Deliveries() {
     Promise.all([
       listOrders(token, { limit: 100 }).then((r) => setOrders(r.orders)),
       listInvoices(token, { limit: 100 }).then((r) => setInvoices(r.invoices)),
+      listAccounts(token, { limit: 100 }).then((r) => setAccounts(r.accounts)),
+      listContacts(token, { limit: 100 }).then((r) => setContacts(r.contacts)),
     ]).catch(() => {});
   }, [token]);
 
@@ -294,7 +342,7 @@ export default function Deliveries() {
                 <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Commande</th>
                 <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">N° de suivi</th>
                 <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Statut</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Transporteur</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Client</th>
                 <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Livraison</th>
                 <th className="px-5 py-3 border-l border-zinc-100" />
               </tr>
@@ -310,7 +358,9 @@ export default function Deliveries() {
                   </td>
                   <td className="px-5 py-3.5 text-zinc-700 border-l border-zinc-100">{d.trackingNumber}</td>
                   <td className="px-5 py-3.5 border-l border-zinc-100"><StatusBadge status={d.status} /></td>
-                  <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">{d.carrier ?? "—"}</td>
+                  <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">
+                    {d.account ? (d.account as { name: string }).name : d.contact ? `${(d.contact as { firstName: string }).firstName} ${(d.contact as { lastName: string }).lastName}` : "—"}
+                  </td>
                   <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">{fmtDate(d.estimatedDelivery)}</td>
                   <td className="px-5 py-3.5 text-right border-l border-zinc-100" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => setEditing(d)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"><Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
@@ -338,7 +388,7 @@ export default function Deliveries() {
 
       <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "Nouvelle livraison" : "Modifier la livraison"} width="w-[600px]">
         {editing !== null && (
-          <DeliveryForm initial={editing === "new" ? null : editing} orders={orders} invoices={invoices} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
+          <DeliveryForm initial={editing === "new" ? null : editing} orders={orders} invoices={invoices} accounts={accounts} contacts={contacts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}
       </SlideOver>
 

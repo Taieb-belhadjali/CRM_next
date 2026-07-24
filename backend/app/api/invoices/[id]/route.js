@@ -1,8 +1,10 @@
 import dbConnect from "@/lib/mongodb";
 import Invoice from "@/models/Invoice";
+import Order from "@/models/Order";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
+import Delivery from "@/models/Delivery";
 
 function unauth() { return withCors(Response.json({ error: "Unauthorized" }, { status: 401 })); }
 function err(e)   { console.error(e); return withCors(Response.json({ error: "Something went wrong." }, { status: 500 })); }
@@ -53,6 +55,27 @@ export async function PATCH(request, { params }) {
     logActivity({ auth, request, action: "invoice_update", entity: "invoice",
       entityId: id, entityLabel: `${invoice.number} – ${invoice.title}`,
       meta: { status: invoice.status } });
+
+    if (invoice.status === "paid" && body.status === "paid") {
+      const order = await Order.findOne({ sourceType: "invoice", sourceId: invoice._id });
+      if (order) {
+        const existing = await Delivery.findOne({ orderId: order._id });
+        if (!existing) {
+          const delivery = await Delivery.create({
+            orderId: order._id,
+            invoiceId: invoice._id,
+            status: "preparing",
+          });
+          logActivity({ auth, request, action: "delivery_create", entity: "delivery",
+            entityId: delivery._id, entityLabel: `${delivery.number} – auto-created from invoice ${invoice.number}`,
+            meta: { autoCreated: true, orderId: order._id, invoiceId: invoice._id } });
+        } else if (!existing.invoiceId) {
+          existing.invoiceId = invoice._id;
+          await existing.save();
+        }
+      }
+    }
+
     return withCors(Response.json({ invoice }));
   } catch (e) { return err(e); }
 }

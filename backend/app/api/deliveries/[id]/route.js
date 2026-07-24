@@ -10,6 +10,8 @@ function err(e)   { console.error(e); return withCors(Response.json({ error: "So
 const POPULATE = [
   { path: "orderId", select: "number title status" },
   { path: "invoiceId", select: "number title" },
+  { path: "contact", select: "firstName lastName email" },
+  { path: "account", select: "name" },
 ];
 
 /** GET /api/deliveries/:id */
@@ -36,11 +38,13 @@ export async function PATCH(request, { params }) {
     const delivery = await Delivery.findById(id);
     if (!delivery) return withCors(Response.json({ error: "Delivery not found" }, { status: 404 }));
 
-    const fields = ["trackingNumber", "status", "carrier", "estimatedDelivery", "notes"];
+    const fields = ["trackingNumber", "deliveryAddress", "status", "carrier",
+                    "estimatedDelivery", "lineItems", "notes", "contact", "account"];
     for (const f of fields) {
       if (body[f] !== undefined) delivery[f] = body[f] || null;
     }
     if (body.trackingNumber) delivery.trackingNumber = body.trackingNumber.trim();
+    if (body.deliveryAddress) delivery.deliveryAddress = body.deliveryAddress.trim();
     if (body.carrier) delivery.carrier = body.carrier.trim();
 
     await delivery.save();

@@ -30,6 +30,8 @@ export async function GET(request) {
       Delivery.find(filter)
         .populate("orderId", "number title status")
         .populate("invoiceId", "number title")
+        .populate("contact", "firstName lastName email")
+        .populate("account", "name")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit).limit(limit).lean(),
       Delivery.countDocuments(filter),
@@ -44,22 +46,28 @@ export async function POST(request) {
     const auth = getAuthUser(request);
     if (!auth) return unauth();
     const body = await request.json();
-    const { orderId, invoiceId, trackingNumber, status, carrier,
-            estimatedDelivery, notes } = body;
+    const { orderId, invoiceId, contact, account, trackingNumber, deliveryAddress,
+            status, carrier, estimatedDelivery, lineItems, notes } = body;
     if (!orderId) return withCors(Response.json({ error: "orderId is required" }, { status: 400 }));
     await dbConnect();
     const delivery = await Delivery.create({
       orderId,
       invoiceId: invoiceId || undefined,
+      contact: contact || undefined,
+      account: account || undefined,
       trackingNumber: trackingNumber?.trim(),
+      deliveryAddress: deliveryAddress?.trim() || undefined,
       status: status || "preparing",
       carrier: carrier?.trim() || undefined,
       estimatedDelivery: estimatedDelivery || undefined,
+      lineItems: Array.isArray(lineItems) ? lineItems : [],
       notes: notes?.trim() || undefined,
     });
     const populated = await delivery.populate([
       { path: "orderId", select: "number title status" },
       { path: "invoiceId", select: "number title" },
+      { path: "contact", select: "firstName lastName email" },
+      { path: "account", select: "name" },
     ]);
     logActivity({ auth, request, action: "delivery_create", entity: "delivery",
       entityId: delivery._id, entityLabel: `${delivery.number} – order ${delivery.orderId?.number || orderId}` });
