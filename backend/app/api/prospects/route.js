@@ -3,6 +3,7 @@ import Prospect from "@/models/Prospect";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
+import { generateReference } from "@/lib/numbering";
 
 function unauth() {
   return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
@@ -42,6 +43,16 @@ export async function GET(request) {
         .lean(),
       Prospect.countDocuments(filter),
     ]);
+
+    const missing = prospects.filter((p) => !p.reference);
+    if (missing.length > 0) {
+      const refs = await Promise.all(missing.map(() => generateReference("client")));
+      await Promise.all(missing.map((p, i) => Prospect.findByIdAndUpdate(p._id, { reference: refs[i] })));
+      prospects.forEach((p) => {
+        const mIdx = missing.findIndex((m) => String(m._id) === String(p._id));
+        if (mIdx >= 0) p.reference = refs[mIdx];
+      });
+    }
 
     return withCors(Response.json({ prospects, total, page, limit }));
   } catch (err) {
@@ -89,6 +100,7 @@ export async function POST(request) {
       data.location = { type: "Point", coordinates: location.coordinates };
     }
 
+    data.reference = await generateReference("client");
     const prospect = await Prospect.create(data);
     const populated = await prospect.populate("owner", "name email");
 

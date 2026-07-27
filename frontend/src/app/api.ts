@@ -299,6 +299,7 @@ export interface Prospect {
   email?: string;
   phone?: string;
   address?: string;
+  reference?: string;
   location?: ProspectLocation;
   source: "manual" | "import" | "web_form";
   status: ProspectStatus;
@@ -1103,4 +1104,43 @@ export function getSettings(token: string) {
 }
 export function updateSettings(token: string, data: Partial<SettingsData>) {
   return request<SettingsData>("/api/settings", { method: "PATCH", body: JSON.stringify(data) }, token);
+}
+
+// ── Numbering ──────────────────────────────────────────────────────────────────
+
+export type EntityType = "quote" | "invoice" | "order" | "purchaseOrder" | "delivery" | "client" | "ticket";
+export type ResetFrequency = "never" | "yearly" | "monthly";
+
+export interface NumberingConfig {
+  _id: string;
+  entityType: EntityType;
+  prefix: string;
+  format: string;
+  padding: number;
+  nextNumber: number;
+  resetFrequency: ResetFrequency;
+  lastResetPeriod: string;
+}
+
+export interface NumberingConfigPayload {
+  prefix?: string;
+  format?: string;
+  padding?: number;
+  resetFrequency?: ResetFrequency;
+}
+
+export function listNumberingConfigs(token: string) {
+  return request<{ configs: NumberingConfig[] }>("/api/settings/numbering", {}, token);
+}
+export function updateNumberingConfig(token: string, entityType: EntityType, payload: NumberingConfigPayload) {
+  return request<{ config: NumberingConfig }>(`/api/settings/numbering/${entityType}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+export function getNextReferencePreview(token: string, entityType: EntityType, params?: { format?: string; prefix?: string; padding?: number; resetFrequency?: string }) {
+  const q = new URLSearchParams();
+  if (params?.format) q.set("format", params.format);
+  if (params?.prefix) q.set("prefix", params.prefix);
+  if (params?.padding) q.set("padding", String(params.padding));
+  if (params?.resetFrequency) q.set("resetFrequency", params.resetFrequency);
+  const qs = q.toString();
+  return request<{ preview: string }>(`/api/settings/numbering/${entityType}/preview${qs ? `?${qs}` : ""}`, {}, token);
 }

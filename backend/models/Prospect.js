@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { generateReference } from "@/lib/numbering";
 
 const ProspectSchema = new mongoose.Schema(
   {
@@ -33,6 +34,7 @@ const ProspectSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    reference: { type: String, unique: true },
     // Simple [lng, lat] point for map view (Sprint 2)
     // The entire field is omitted when no location is provided.
     // The 2dsphere index is sparse so it skips documents without coordinates.
@@ -68,6 +70,12 @@ const ProspectSchema = new mongoose.Schema(
 );
 
 ProspectSchema.index({ location: "2dsphere" }, { sparse: true });
+
+ProspectSchema.pre("save", async function () {
+  if (!this.reference) {
+    this.reference = await generateReference("client");
+  }
+});
 
 export default mongoose.models.Prospect ||
   mongoose.model("Prospect", ProspectSchema);

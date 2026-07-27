@@ -270,6 +270,7 @@ function ProspectDetail({ prospect, onEdit, onDelete, onConvert }: { prospect: P
         <StatusBadge status={prospect.status} />
       </div>
       <div>
+        <DetailRow label={t("pages.prospects.reference")} value={prospect.reference} />
         <DetailRow label={t("forms.email")} value={prospect.email} />
         <DetailRow label={t("forms.phone")} value={prospect.phone} />
         <DetailRow label={t("forms.address")} value={prospect.address} />
@@ -475,23 +476,24 @@ export default function Prospects() {
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-100">
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.name")}</th>
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">{t("forms.company")}</th>
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.status")}</th>
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.tags")}</th>
-                    <th className="px-5 py-3" />
-                  </tr>
-                </thead>
+                 <thead>
+                   <tr className="border-b border-zinc-100">
+                     <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("pages.prospects.reference")}</th>
+                     <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">{t("forms.company")}</th>
+                     <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.status")}</th>
+                     <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.tags")}</th>
+                     <th className="px-5 py-3" />
+                   </tr>
+                 </thead>
                 <tbody className="divide-y divide-zinc-50">
-                  {prospects.map((p) => (
-                    <tr key={p._id} onClick={() => setSelected(p)} className="hover:bg-zinc-50 cursor-pointer transition-colors">
-                      <td className="px-5 py-3.5">
-                        <p className="font-medium text-zinc-800">{p.firstName} {p.lastName}</p>
-                        {p.jobTitle && <p className="text-xs text-zinc-400">{p.jobTitle}</p>}
-                      </td>
-                      <td className="px-5 py-3.5 text-zinc-500 hidden md:table-cell">{p.company || "—"}</td>
+                   {prospects.map((p) => (
+                      <tr key={p._id} onClick={() => setSelected(p)} className="hover:bg-zinc-50 cursor-pointer transition-colors">
+                        <td className="px-5 py-3.5">
+                          <p className="font-mono text-xs text-zinc-400">{p.reference || "—"}</p>
+                          <p className="font-medium text-zinc-800">{p.firstName} {p.lastName}</p>
+                          {p.jobTitle && <p className="text-xs text-zinc-400">{p.jobTitle}</p>}
+                        </td>
+                        <td className="px-5 py-3.5 text-zinc-500 hidden md:table-cell">{p.company || "—"}</td>
                       <td className="px-5 py-3.5"><StatusBadge status={p.status} /></td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
                         <div className="flex flex-wrap gap-1">

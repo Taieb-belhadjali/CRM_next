@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
+import { generateReference } from "@/lib/numbering";
 
 const AccountSchema = new mongoose.Schema(
   {
+    reference: { type: String, unique: true },
     name: {
       type: String,
       required: true,
@@ -38,6 +40,12 @@ const AccountSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+AccountSchema.pre("save", async function () {
+  if (!this.reference) {
+    this.reference = await generateReference("client");
+  }
+});
 
 export default mongoose.models.Account ||
   mongoose.model("Account", AccountSchema);

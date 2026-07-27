@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { generateReference } from "@/lib/numbering";
 
 const LineItemSchema = new mongoose.Schema(
   {
@@ -41,9 +42,7 @@ const DeliverySchema = new mongoose.Schema(
 
 DeliverySchema.pre("save", async function () {
   if (!this.number) {
-    const year = new Date().getFullYear();
-    const count = await mongoose.models.Delivery.countDocuments();
-    this.number = `DEL-${year}-${String(count + 1).padStart(4, "0")}`;
+    this.number = await generateReference("delivery");
   }
   if (this.status === "delivered" && !this.deliveredAt) {
     this.deliveredAt = new Date();

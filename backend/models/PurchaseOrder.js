@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { generateReference } from "@/lib/numbering";
 
 const LineItemSchema = new mongoose.Schema(
   {
@@ -38,9 +39,7 @@ const PurchaseOrderSchema = new mongoose.Schema(
 
 PurchaseOrderSchema.pre("save", async function () {
   if (!this.number) {
-    const year = new Date().getFullYear();
-    const count = await mongoose.models.PurchaseOrder.countDocuments();
-    this.number = `PO-${year}-${String(count + 1).padStart(4, "0")}`;
+    this.number = await generateReference("purchaseOrder");
   }
   let subtotal = 0, taxTotal = 0;
   for (const item of this.lineItems) {

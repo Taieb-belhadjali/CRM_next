@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { generateReference } from "@/lib/numbering";
 
 const LineItemSchema = new mongoose.Schema(
   {
@@ -44,9 +45,7 @@ const OrderSchema = new mongoose.Schema(
 
 OrderSchema.pre("save", async function () {
   if (!this.number) {
-    const year = new Date().getFullYear();
-    const count = await mongoose.models.Order.countDocuments();
-    this.number = `ORD-${year}-${String(count + 1).padStart(4, "0")}`;
+    this.number = await generateReference("order");
   }
   let subtotal = 0, taxTotal = 0;
   for (const item of this.lineItems) {

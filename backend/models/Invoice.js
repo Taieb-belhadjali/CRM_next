@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
+import { generateReference } from "@/lib/numbering";
 
 const LineItemSchema = new mongoose.Schema(
   {
     description: { type: String, required: true, trim: true },
-    quantity:    { type: Number, required: true, min: 0, default: 1 },
+    quantity:    { type: Number, required: true, min: 0, default: 0 },
     unitPrice:   { type: Number, required: true, min: 0, default: 0 },
     taxRate:     { type: Number, default: 0, min: 0, max: 100 },
     subtotal:    { type: Number, default: 0 },
@@ -15,7 +16,7 @@ const LineItemSchema = new mongoose.Schema(
 
 const InvoiceSchema = new mongoose.Schema(
   {
-    number:       { type: String, unique: true }, // e.g. INV-2026-0001
+    number:       { type: String, unique: true },
     title:        { type: String, required: true, trim: true },
     status: {
       type: String,
@@ -26,32 +27,25 @@ const InvoiceSchema = new mongoose.Schema(
     dueDate:      { type: Date },
     paidDate:     { type: Date },
     paidAmount:   { type: Number, default: 0 },
-    // Source quote (if converted)
     quoteId:      { type: mongoose.Schema.Types.ObjectId, ref: "Quote", default: null },
-    // Relations
     deal:         { type: mongoose.Schema.Types.ObjectId, ref: "Deal" },
     contact:      { type: mongoose.Schema.Types.ObjectId, ref: "Contact" },
     account:      { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
     owner:        { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    // Line items
     lineItems:    [LineItemSchema],
-    // Totals
     subtotal:     { type: Number, default: 0 },
     taxTotal:     { type: Number, default: 0 },
     grandTotal:   { type: Number, default: 0 },
-    // Free-text fields
     notes:        { type: String, trim: true },
     terms:        { type: String, trim: true },
-    paymentInfo:  { type: String, trim: true }, // bank details, etc.
+    paymentInfo:  { type: String, trim: true },
   },
   { timestamps: true }
 );
 
 InvoiceSchema.pre("save", async function () {
   if (!this.number) {
-    const year = new Date().getFullYear();
-    const count = await mongoose.models.Invoice.countDocuments();
-    this.number = `INV-${year}-${String(count + 1).padStart(4, "0")}`;
+    this.number = await generateReference("invoice");
   }
   let subtotal = 0, taxTotal = 0;
   for (const item of this.lineItems) {

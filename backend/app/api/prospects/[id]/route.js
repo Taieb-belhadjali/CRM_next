@@ -3,6 +3,7 @@ import Prospect from "@/models/Prospect";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
+import { generateReference } from "@/lib/numbering";
 
 function unauth() {
   return withCors(Response.json({ error: "Unauthorized" }, { status: 401 }));
@@ -19,6 +20,11 @@ export async function GET(request, { params }) {
   const prospect = await Prospect.findById(id).populate("owner", "name email");
   if (!prospect) {
     return withCors(Response.json({ error: "Prospect not found" }, { status: 404 }));
+  }
+
+  if (!prospect.reference) {
+    prospect.reference = await generateReference("client");
+    await prospect.save();
   }
 
   return withCors(Response.json({ prospect }));

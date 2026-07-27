@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import Prospect from "@/models/Prospect";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { generateReference } from "@/lib/numbering";
 import { logActivity } from "@/lib/activity";
 
 export async function POST(request) {
@@ -46,7 +47,11 @@ export async function POST(request) {
     });
   }
 
-  const inserted = await Prospect.insertMany(valid, { ordered: false });
+  const withReferences = await Promise.all(
+    valid.map(async (item) => ({ ...item, reference: await generateReference("client") }))
+  );
+
+  const inserted = await Prospect.insertMany(withReferences, { ordered: false });
 
   logActivity({
     auth,
