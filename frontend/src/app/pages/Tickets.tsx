@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Ticket } from "lucide-react";
 import { listTickets, createTicket, updateTicket, deleteTicket, listContacts, listAccounts, listUsers, type Ticket as TicketType, type TicketPayload, type TicketStatus, type TicketPriority, type Contact, type Account, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -28,14 +29,17 @@ const STATUS_OPTIONS:   TicketStatus[]   = ["open", "in_progress", "resolved", "
 const PRIORITY_OPTIONS: TicketPriority[] = ["urgent", "high", "medium", "low"];
 
 function StatusBadge({ status }: { status: TicketStatus }) {
-  const label = status === "in_progress" ? "In progress" : status.charAt(0).toUpperCase() + status.slice(1);
+  const { t } = useLanguage();
+  const label = status === "in_progress" ? t("status.inProgress") : t("status." + status);
   return <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_STYLES[status]}`}>{label}</span>;
 }
 function PriorityBadge({ priority }: { priority: TicketPriority }) {
-  return <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[priority]}`}>{priority.charAt(0).toUpperCase() + priority.slice(1)}</span>;
+  const { t } = useLanguage();
+  return <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full border ${PRIORITY_STYLES[priority]}`}>{t("priority." + priority)}</span>;
 }
 
 function TicketForm({ initial, contacts, accounts, users, onSave, onCancel, token }: { initial?: TicketType | null; contacts: Contact[]; accounts: Account[]; users: AdminUser[]; onSave: (t: TicketType) => void; onCancel: () => void; token: string }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<TicketPayload>({
     subject:     initial?.subject     ?? "",
     description: initial?.description ?? "",
@@ -54,59 +58,59 @@ function TicketForm({ initial, contacts, accounts, users, onSave, onCancel, toke
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.subject?.trim()) { setError("Subject is required."); return; }
+    if (!form.subject?.trim()) { setError(t("errors.subjectRequired")); return; }
     setError(""); setLoading(true);
     try {
       const payload = { ...form, contact: form.contact || null, account: form.account || null, assignee: form.assignee || null };
       const res = initial ? await updateTicket(token, initial._id, payload) : await createTicket(token, payload);
       onSave(res.ticket);
-    } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.saveFailed")); }
     finally { setLoading(false); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Subject" required>
-        <input className={inputCls} value={form.subject} onChange={set("subject")} placeholder="Issue with invoice #1042" />
+      <FormField label={t("forms.subject")} required>
+        <input className={inputCls} value={form.subject} onChange={set("subject")} placeholder={t("forms.subjectPlaceholder")} />
       </FormField>
-      <FormField label="Description">
-        <textarea className={inputCls} rows={3} value={form.description ?? ""} onChange={set("description")} placeholder="Describe the issue…" />
+      <FormField label={t("forms.description")}>
+        <textarea className={inputCls} rows={3} value={form.description ?? ""} onChange={set("description")} placeholder={t("forms.descriptionPlaceholder")} />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Status">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status} onChange={set("status")}>
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? t("status.inProgress") : t("status." + s)}</option>)}
           </select>
         </FormField>
-        <FormField label="Priority">
+        <FormField label={t("forms.priority")}>
           <select className={selectCls} value={form.priority} onChange={set("priority")}>
-            {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+            {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{t("priority." + p)}</option>)}
           </select>
         </FormField>
       </div>
-      <FormField label="Contact">
+      <FormField label={t("forms.contact")}>
         <select className={selectCls} value={form.contact ?? ""} onChange={set("contact")}>
-          <option value="">— No contact —</option>
+          <option value="">{t("forms.noContact")}</option>
           {contacts.map((c) => <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>)}
         </select>
       </FormField>
-      <FormField label="Account">
+      <FormField label={t("forms.account")}>
         <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
-          <option value="">— No account —</option>
+          <option value="">{t("forms.noAccount")}</option>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
         </select>
       </FormField>
-      <FormField label="Assignee">
+      <FormField label={t("forms.assignee")}>
         <select className={selectCls} value={form.assignee ?? ""} onChange={set("assignee")}>
-          <option value="">— Unassigned —</option>
+          <option value="">{t("forms.unassigned")}</option>
           {users.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
         </select>
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Create ticket"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("pages.tickets.newTicket")}
         </button>
       </div>
     </form>
@@ -115,6 +119,7 @@ function TicketForm({ initial, contacts, accounts, users, onSave, onCancel, toke
 
 export default function Tickets() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
@@ -152,12 +157,12 @@ export default function Tickets() {
       .finally(() => setLoading(false));
   }, [token, search, page, statusFilter, priorityFilter]);
 
-  const handleSaved = (t: TicketType) => {
+  const handleSaved = (ticket: TicketType) => {
     setTickets((prev) => {
-      const idx = prev.findIndex((x) => x._id === t._id);
-      if (idx >= 0) return prev.map((x) => (x._id === t._id ? t : x));
+      const idx = prev.findIndex((x) => x._id === ticket._id);
+      if (idx >= 0) return prev.map((x) => (x._id === ticket._id ? ticket : x));
       setTotal((n) => n + 1);
-      return [t, ...prev];
+      return [ticket, ...prev];
     });
     setEditing(null);
   };
@@ -170,7 +175,7 @@ export default function Tickets() {
       setTickets((prev) => prev.filter((x) => x._id !== deleting._id));
       setTotal((n) => n - 1);
       setDeleting(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("errors.deleteFailed")); }
     finally { setDeleteLoading(false); }
   };
 
@@ -178,23 +183,23 @@ export default function Tickets() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Tickets</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">{total} ticket{total !== 1 ? "s" : ""}</p>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.tickets.title")}</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">{total} {total === 1 ? t("pages.tickets.ticketSingular") : t("pages.tickets.ticketPlural")}</p>
         </div>
         <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> New ticket
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.tickets.newTicket")}
         </button>
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder="Search tickets…" /></div>
+        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.tickets.searchPlaceholder")} /></div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-          <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          <option value="">{t("pages.tickets.allStatuses")}</option>
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? t("status.inProgress") : t("status." + s)}</option>)}
         </select>
         <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-          <option value="">All priorities</option>
-          {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+          <option value="">{t("pages.tickets.allPriorities")}</option>
+          {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{t("priority." + p)}</option>)}
         </select>
       </div>
 
@@ -206,37 +211,37 @@ export default function Tickets() {
         ) : tickets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Ticket className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">No tickets found.</p>
+            <p className="text-sm text-zinc-400">{t("pages.tickets.noTickets")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Subject</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Status</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">Priority</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Contact</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Assignee</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.subject")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.status")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">{t("forms.priority")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.contact")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.assignee")}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
-              {tickets.map((t) => {
-                const contact = t.contact as { firstName: string; lastName: string } | null | undefined;
-                const assignee = t.assignee as { name: string } | null | undefined;
+              {tickets.map((ticket) => {
+                const contact = ticket.contact as { firstName: string; lastName: string } | null | undefined;
+                const assignee = ticket.assignee as { name: string } | null | undefined;
                 return (
-                  <tr key={t._id} className="hover:bg-zinc-50 transition-colors">
+                  <tr key={ticket._id} className="hover:bg-zinc-50 transition-colors">
                     <td className="px-5 py-3.5">
-                      <p className="font-medium text-zinc-800 truncate max-w-[220px]">{t.subject}</p>
-                      {t.description && <p className="text-xs text-zinc-400 truncate max-w-[220px] mt-0.5">{t.description}</p>}
+                      <p className="font-medium text-zinc-800 truncate max-w-[220px]">{ticket.subject}</p>
+                      {ticket.description && <p className="text-xs text-zinc-400 truncate max-w-[220px] mt-0.5">{ticket.description}</p>}
                     </td>
-                    <td className="px-5 py-3.5"><StatusBadge status={t.status} /></td>
-                    <td className="px-5 py-3.5 hidden md:table-cell"><PriorityBadge priority={t.priority} /></td>
+                    <td className="px-5 py-3.5"><StatusBadge status={ticket.status} /></td>
+                    <td className="px-5 py-3.5 hidden md:table-cell"><PriorityBadge priority={ticket.priority} /></td>
                     <td className="px-5 py-3.5 text-zinc-500 hidden lg:table-cell">{contact ? `${contact.firstName} ${contact.lastName}` : "—"}</td>
                     <td className="px-5 py-3.5 text-zinc-500 hidden lg:table-cell">{assignee?.name ?? "—"}</td>
                     <td className="px-5 py-3.5 text-right">
-                      <button onClick={() => setEditing(t)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"><Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
-                      <button onClick={() => setDeleting(t)} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors ml-1"><Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
+                      <button onClick={() => setEditing(ticket)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"><Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
+                      <button onClick={() => setDeleting(ticket)} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors ml-1"><Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
                     </td>
                   </tr>
                 );
@@ -248,7 +253,7 @@ export default function Tickets() {
 
       <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
 
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "New ticket" : "Edit ticket"}>
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.tickets.newTicket") : `${t("common.edit")} ${t("pages.tickets.titleSingular")}`}>
         {editing !== null && <TicketForm initial={editing === "new" ? null : editing} contacts={contacts} accounts={accounts} users={users} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />}
       </SlideOver>
       {deleting && <ConfirmDelete name={deleting.subject} onConfirm={handleDelete} onCancel={() => setDeleting(null)} loading={deleteLoading} />}

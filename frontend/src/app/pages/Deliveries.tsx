@@ -9,6 +9,7 @@ import {
   type Order, type Invoice, type Account, type Contact,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -25,14 +26,11 @@ const STATUS_STYLES: Record<DeliveryStatus, string> = {
   delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
-const STATUS_LABELS: Record<DeliveryStatus, string> = {
-  preparing: "Préparation", shipped: "Expédiée", delivered: "Livrée",
-};
-
 function StatusBadge({ status }: { status: DeliveryStatus }) {
+  const { t } = useLanguage();
   return (
     <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_STYLES[status]}`}>
-      {STATUS_LABELS[status]}
+      {t("status." + status)}
     </span>
   );
 }
@@ -42,16 +40,17 @@ function fmtDate(iso?: string | null) {
   return new Date(iso).toLocaleDateString("fr-FR");
 }
 
-const TRANSITIONS: Record<DeliveryStatus, { label: string; next: DeliveryStatus; icon: React.ElementType; cls: string }[]> = {
-  preparing: [{ label: "Expédier", next: "shipped", icon: Truck, cls: "bg-blue-50 text-blue-600 hover:bg-blue-100" }],
-  shipped:   [{ label: "Marquer livrée", next: "delivered", icon: CheckCircle, cls: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" }],
-  delivered: [{ label: "Remettre en préparation", next: "preparing", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
+const TRANSITIONS: Record<DeliveryStatus, { labelKey: string; next: DeliveryStatus; icon: React.ElementType; cls: string }[]> = {
+  preparing: [{ labelKey: "pages.deliveries.transitionShip", next: "shipped", icon: Truck, cls: "bg-blue-50 text-blue-600 hover:bg-blue-100" }],
+  shipped:   [{ labelKey: "pages.deliveries.transitionDelivered", next: "delivered", icon: CheckCircle, cls: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" }],
+  delivered: [{ labelKey: "pages.deliveries.transitionReopen", next: "preparing", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
 };
 
 function DeliveryForm({ initial, orders, invoices, accounts, contacts, onSave, onCancel, token }: {
   initial?: Delivery | null; orders: Order[]; invoices: Invoice[]; accounts: Account[]; contacts: Contact[];
   onSave: (d: Delivery) => void; onCancel: () => void; token: string;
 }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<DeliveryPayload>({
     orderId:            initial?.orderId ?? "",
     invoiceId:          initial?.invoiceId ?? null,
@@ -74,8 +73,8 @@ function DeliveryForm({ initial, orders, invoices, accounts, contacts, onSave, o
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.orderId) { setError("La commande est requise."); return; }
-    if (!form.trackingNumber?.trim()) { setError("Le numéro de suivi est requis."); return; }
+    if (!form.orderId) { setError(t("errors.orderRequired")); return; }
+    if (!form.trackingNumber?.trim()) { setError(t("errors.trackingNumberRequired")); return; }
     setError(""); setLoading(true);
     try {
       const payload = {
@@ -86,74 +85,74 @@ function DeliveryForm({ initial, orders, invoices, accounts, contacts, onSave, o
       };
       const res = initial ? await updateDelivery(token, initial._id, payload) : await createDelivery(token, payload);
       onSave(res.delivery);
-    } catch (err) { setError(err instanceof Error ? err.message : "Une erreur est survenue."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.genericError")); }
     finally { setLoading(false); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Commande" required>
+        <FormField label={t("forms.order")} required>
           <select className={selectCls} value={form.orderId} onChange={set("orderId")}>
-            <option value="">— Sélectionner —</option>
+            <option value="">{t("pages.orders.selectSource")}</option>
             {orders.map((o) => <option key={o._id} value={o._id}>{o.number} – {o.title}</option>)}
           </select>
         </FormField>
-        <FormField label="Facture liée (optionnel)">
+        <FormField label={t("forms.invoiceLinked")}>
           <select className={selectCls} value={form.invoiceId ?? ""} onChange={set("invoiceId")}>
-            <option value="">— Aucune —</option>
+            <option value="">{t("pages.orders.noSource")}</option>
             {invoices.map((inv) => <option key={inv._id} value={inv._id}>{inv.number} – {inv.title}</option>)}
           </select>
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Client (compte)">
+        <FormField label={t("forms.clientAccount")}>
           <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
-            <option value="">— Aucun —</option>
+            <option value="">{t("pages.orders.noSource")}</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
         </FormField>
-        <FormField label="Contact">
+        <FormField label={t("forms.contact")}>
           <select className={selectCls} value={form.contact ?? ""} onChange={set("contact")}>
-            <option value="">— Aucun —</option>
+            <option value="">{t("pages.orders.noSource")}</option>
             {contacts.map((c) => <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>)}
           </select>
         </FormField>
       </div>
-      <FormField label="Adresse de livraison">
-        <textarea className={inputCls} rows={2} value={form.deliveryAddress ?? ""} onChange={set("deliveryAddress")} placeholder="Adresse complète de livraison…" />
+      <FormField label={t("forms.deliveryAddress")}>
+        <textarea className={inputCls} rows={2} value={form.deliveryAddress ?? ""} onChange={set("deliveryAddress")} placeholder={t("forms.deliveryAddressPlaceholder")} />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="N° de suivi" required>
-          <input className={inputCls} value={form.trackingNumber} onChange={set("trackingNumber")} placeholder="TRK123456" />
+        <FormField label={t("forms.trackingNumber")} required>
+          <input className={inputCls} value={form.trackingNumber} onChange={set("trackingNumber")} placeholder={t("forms.trackingNumberPlaceholder")} />
         </FormField>
-        <FormField label="Statut">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status} onChange={set("status")}>
             {(["preparing","shipped","delivered"] as DeliveryStatus[]).map((s) =>
-              <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              <option key={s} value={s}>{t("status." + s)}</option>)}
           </select>
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Transporteur">
-          <input className={inputCls} value={form.carrier} onChange={set("carrier")} placeholder="Colissimo, DHL…" />
+        <FormField label={t("forms.carrier")}>
+          <input className={inputCls} value={form.carrier} onChange={set("carrier")} placeholder={t("forms.carrierPlaceholder")} />
         </FormField>
-        <FormField label="Livraison estimée">
+        <FormField label={t("forms.estimatedDelivery")}>
           <input className={inputCls} type="date" value={form.estimatedDelivery ?? ""} onChange={set("estimatedDelivery")} />
         </FormField>
       </div>
       <div>
-        <p className="text-xs font-medium text-zinc-700 mb-2">Produits à livrer</p>
+        <p className="text-xs font-medium text-zinc-700 mb-2">{t("forms.productsToDeliver")}</p>
         <LineItemEditor items={form.lineItems ?? []} onChange={(li) => setForm((p) => ({ ...p, lineItems: li }))} />
       </div>
-      <FormField label="Notes">
-        <textarea className={inputCls} rows={2} value={form.notes ?? ""} onChange={set("notes")} placeholder="Remarques…" />
+      <FormField label={t("forms.notes")}>
+        <textarea className={inputCls} rows={2} value={form.notes ?? ""} onChange={set("notes")} placeholder={t("forms.notesPlaceholder")} />
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Annuler</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Enregistrer" : "Créer la livraison"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("pages.deliveries.createDelivery")}
         </button>
       </div>
     </form>
@@ -165,6 +164,7 @@ function DeliveryDetail({ delivery, token, onEdit, onDelete, onUpdated }: {
   onEdit: () => void; onDelete: () => void;
   onUpdated: (d: Delivery) => void;
 }) {
+  const { t } = useLanguage();
   const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -173,7 +173,7 @@ function DeliveryDetail({ delivery, token, onEdit, onDelete, onUpdated }: {
     try {
       const res = await updateDelivery(token, delivery._id, { status: next });
       onUpdated(res.delivery);
-    } catch { setError("Status update failed."); }
+    } catch { setError(t("errors.statusUpdateFailed")); }
     finally { setStatusLoading(false); }
   };
 
@@ -188,35 +188,35 @@ function DeliveryDetail({ delivery, token, onEdit, onDelete, onUpdated }: {
         <div>
           <p className="text-[11px] text-zinc-400 font-mono">{delivery.number}</p>
           <p className="text-base font-semibold text-zinc-900 mt-0.5">
-            Livraison {delivery.orderId ? (delivery.orderId as { number: string }).number : "—"}
+            {t("pages.deliveries.deliveryTitle", { number: delivery.orderId ? (delivery.orderId as { number: string }).number : "—" })}
           </p>
         </div>
         <StatusBadge status={delivery.status} />
       </div>
       <div>
-        <DetailRow label="Client" value={accountName ?? contactName} />
-        <DetailRow label="Adresse" value={delivery.deliveryAddress} />
-        <DetailRow label="N° de suivi" value={delivery.trackingNumber} />
-        <DetailRow label="Transporteur" value={delivery.carrier} />
-        <DetailRow label="Livraison estimée" value={fmtDate(delivery.estimatedDelivery)} />
-        <DetailRow label="Livrée le" value={fmtDate(delivery.deliveredAt)} />
-        {delivery.order && <DetailRow label="Commande" value={`${(delivery.order as { number: string }).number} – ${(delivery.order as { title: string }).title}`} />}
-        {delivery.invoice && <DetailRow label="Facture" value={`${(delivery.invoice as { number: string }).number} – ${(delivery.invoice as { title: string }).title}`} />}
+        <DetailRow label={t("forms.client")} value={accountName ?? contactName} />
+        <DetailRow label={t("pages.deliveries.address")} value={delivery.deliveryAddress} />
+        <DetailRow label={t("forms.trackingNumber")} value={delivery.trackingNumber} />
+        <DetailRow label={t("forms.carrier")} value={delivery.carrier} />
+        <DetailRow label={t("forms.estimatedDelivery")} value={fmtDate(delivery.estimatedDelivery)} />
+        <DetailRow label={t("pages.deliveries.deliveredOn")} value={fmtDate(delivery.deliveredAt)} />
+        {delivery.order && <DetailRow label={t("pages.deliveries.order")} value={`${(delivery.order as { number: string }).number} – ${(delivery.order as { title: string }).title}`} />}
+        {delivery.invoice && <DetailRow label={t("forms.invoice")} value={`${(delivery.invoice as { number: string }).number} – ${(delivery.invoice as { title: string }).title}`} />}
       </div>
       <div>
-        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-3">Produits à livrer</p>
+        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-3">{t("forms.productsToDeliver")}</p>
         <LineItemEditor items={delivery.lineItems ?? []} onChange={() => {}} readOnly />
       </div>
-      {delivery.notes && <DetailRow label="Notes" value={delivery.notes} />}
+      {delivery.notes && <DetailRow label={t("forms.notes")} value={delivery.notes} />}
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       {TRANSITIONS[delivery.status]?.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {TRANSITIONS[delivery.status].map((t) => {
-            const Icon = t.icon;
+          {TRANSITIONS[delivery.status].map((tr) => {
+            const Icon = tr.icon;
             return (
-              <button key={t.next} onClick={() => handleStatus(t.next)} disabled={statusLoading}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${t.cls}`}>
-                <Icon className="w-3.5 h-3.5" strokeWidth={1.75} /> {t.label}
+              <button key={tr.next} onClick={() => handleStatus(tr.next)} disabled={statusLoading}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tr.cls}`}>
+                <Icon className="w-3.5 h-3.5" strokeWidth={1.75} /> {t(tr.labelKey)}
               </button>
             );
           })}
@@ -225,11 +225,11 @@ function DeliveryDetail({ delivery, token, onEdit, onDelete, onUpdated }: {
       <div className="flex flex-wrap gap-2 pt-1">
         <button onClick={onEdit}
           className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> Modifier
+          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.edit")}
         </button>
         <button onClick={onDelete}
           className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Supprimer
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.delete")}
         </button>
       </div>
     </div>
@@ -238,6 +238,7 @@ function DeliveryDetail({ delivery, token, onEdit, onDelete, onUpdated }: {
 
 export default function Deliveries() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [total, setTotal]         = useState(0);
   const [page, setPage]           = useState(1);
@@ -297,7 +298,7 @@ export default function Deliveries() {
       setTotal((n) => n - 1);
       if (selected?._id === deleting._id) setSelected(null);
       setDeleting(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("errors.deleteFailed")); }
     finally { setDeleteLoading(false); }
   };
 
@@ -305,22 +306,22 @@ export default function Deliveries() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Livraisons</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">{total} livraison{total !== 1 ? "s" : ""}</p>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.deliveries.title")}</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">{total} {total === 1 ? t("pages.deliveries.deliverySingular") : t("pages.deliveries.deliveryPlural")}</p>
         </div>
         <button onClick={() => setEditing("new")}
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> Nouvelle livraison
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.deliveries.newDelivery")}
         </button>
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder="Rechercher une livraison…" /></div>
+        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.deliveries.searchPlaceholder")} /></div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-          <option value="">Tous les statuts</option>
+          <option value="">{t("pages.deliveries.allStatuses")}</option>
           {(["preparing","shipped","delivered"] as DeliveryStatus[]).map((s) =>
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+            <option key={s} value={s}>{t("status." + s)}</option>)}
         </select>
       </div>
 
@@ -332,18 +333,18 @@ export default function Deliveries() {
         ) : deliveries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Truck className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">Aucune livraison.</p>
+            <p className="text-sm text-zinc-400">{t("pages.deliveries.noDeliveries")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Référence</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Commande</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">N° de suivi</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Statut</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Client</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Livraison</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("pages.deliveries.reference")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">{t("pages.deliveries.order")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">{t("forms.trackingNumber")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">{t("forms.status")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("forms.client")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("pages.deliveries.deliveryColumn")}</th>
                 <th className="px-5 py-3 border-l border-zinc-100" />
               </tr>
             </thead>
@@ -375,7 +376,7 @@ export default function Deliveries() {
 
       <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
 
-      <SlideOver open={!!selected && !editing} onClose={() => setSelected(null)} title={selected?.number ?? ""} subtitle="Détail de la livraison" width="w-[600px]">
+      <SlideOver open={!!selected && !editing} onClose={() => setSelected(null)} title={selected?.number ?? ""} subtitle={t("pages.deliveries.detailSubtitle")} width="w-[600px]">
         {selected && token && (
           <DeliveryDetail
             delivery={selected} token={token}
@@ -386,13 +387,13 @@ export default function Deliveries() {
         )}
       </SlideOver>
 
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "Nouvelle livraison" : "Modifier la livraison"} width="w-[600px]">
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.deliveries.newDelivery") : t("pages.deliveries.editDelivery")} width="w-[600px]">
         {editing !== null && (
           <DeliveryForm initial={editing === "new" ? null : editing} orders={orders} invoices={invoices} accounts={accounts} contacts={contacts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}
       </SlideOver>
 
-      {deleting && <ConfirmDelete name={`${deleting.number} – livraison`} onConfirm={handleDelete} onCancel={() => setDeleting(null)} loading={deleteLoading} />}
+      {deleting && <ConfirmDelete name={`${deleting.number} – ${t("pages.deliveries.deliverySingular")}`} onConfirm={handleDelete} onCancel={() => setDeleting(null)} loading={deleteLoading} />}
     </div>
   );
 }

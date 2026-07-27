@@ -13,6 +13,7 @@ import {
   type Contact,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -36,6 +37,7 @@ interface FormProps {
 }
 
 function AccountForm({ initial, onSave, onCancel, token }: FormProps) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<AccountPayload>({
     name: initial?.name ?? "",
     siret: initial?.siret ?? "",
@@ -68,29 +70,29 @@ function AccountForm({ initial, onSave, onCancel, token }: FormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Company name" required>
-        <input className={inputCls} value={form.name} onChange={set("name")} placeholder="Acme Corp" />
+      <FormField label={t("forms.company")} required>
+        <input className={inputCls} value={form.name} onChange={set("name")} placeholder={t("forms.company")} />
       </FormField>
       <FormField label="SIRET">
         <input className={inputCls} value={form.siret ?? ""} onChange={set("siret")} placeholder="12345678901234" />
       </FormField>
-      <FormField label="Sector">
+      <FormField label={t("forms.sector")}>
         <input className={inputCls} value={form.sector ?? ""} onChange={set("sector")} placeholder="Technology" />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Size">
+        <FormField label={t("forms.size")}>
           <select className={selectCls} value={form.size ?? ""} onChange={set("size")}>
             <option value="">— Select —</option>
             {SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </FormField>
-        <FormField label="Status">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status ?? "active"} onChange={set("status")}>
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{t("status." + s)}</option>)}
           </select>
         </FormField>
       </div>
-      <FormField label="Est. revenue (€)">
+      <FormField label={t("forms.revenue")}>
         <input
           className={inputCls} type="number" min={0}
           value={form.estimatedRevenue ?? ""}
@@ -98,14 +100,14 @@ function AccountForm({ initial, onSave, onCancel, token }: FormProps) {
           placeholder="500000"
         />
       </FormField>
-      <FormField label="Address">
+      <FormField label={t("forms.address")}>
         <input className={inputCls} value={form.address ?? ""} onChange={set("address")} placeholder="12 Rue de Rivoli, Paris" />
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Create account"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("register.createAccount")}
         </button>
       </div>
     </form>
@@ -122,6 +124,7 @@ interface DetailProps {
 }
 
 function AccountDetail({ account, contacts, onEdit, onDelete }: DetailProps) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-4 pb-4 border-b border-zinc-100">
@@ -137,10 +140,10 @@ function AccountDetail({ account, contacts, onEdit, onDelete }: DetailProps) {
 
       <div>
         <DetailRow label="SIRET" value={account.siret} />
-        <DetailRow label="Size" value={account.size} />
-        <DetailRow label="Est. revenue" value={account.estimatedRevenue != null ? `€${account.estimatedRevenue.toLocaleString()}` : undefined} />
-        <DetailRow label="Address" value={account.address} />
-        <DetailRow label="Owner" value={account.owner?.name} />
+        <DetailRow label={t("forms.size")} value={account.size} />
+        <DetailRow label={t("forms.revenue")} value={account.estimatedRevenue != null ? `€${account.estimatedRevenue.toLocaleString()}` : undefined} />
+        <DetailRow label={t("forms.address")} value={account.address} />
+        <DetailRow label={t("forms.owner")} value={account.owner?.name} />
         <DetailRow label="Added" value={new Date(account.createdAt).toLocaleDateString()} />
       </div>
 
@@ -168,10 +171,10 @@ function AccountDetail({ account, contacts, onEdit, onDelete }: DetailProps) {
 
       <div className="flex gap-2 pt-2">
         <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> Edit
+          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.edit")}
         </button>
         <button onClick={onDelete} className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Delete
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.delete")}
         </button>
       </div>
     </div>
@@ -182,6 +185,7 @@ function AccountDetail({ account, contacts, onEdit, onDelete }: DetailProps) {
 
 export default function Accounts() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -241,7 +245,7 @@ export default function Accounts() {
       if (selected?._id === deleting._id) setSelected(null);
       setDeleting(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed.");
+      setError(e instanceof Error ? e.message : t("errors.deleteFailed"));
     } finally { setDeleteLoading(false); }
   };
 
@@ -249,23 +253,23 @@ export default function Accounts() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Accounts</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.accounts.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} account{total !== 1 ? "s" : ""}</p>
         </div>
         <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> New account
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.accounts.newAccount")}
         </button>
       </div>
 
       <div className="flex gap-3">
-        <div className="flex-1"><SearchBar value={search} onChange={setSearch} placeholder="Search accounts…" /></div>
+        <div className="flex-1"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.accounts.searchPlaceholder")} /></div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
         >
           <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{t("status." + s)}</option>)}
         </select>
       </div>
 
@@ -279,16 +283,16 @@ export default function Accounts() {
         ) : accounts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Building2 className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">{search ? "No accounts match your search." : "No accounts yet."}</p>
+            <p className="text-sm text-zinc-400">{search ? "No accounts match your search." : t("pages.accounts.noAccounts")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Name</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">Sector</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Size</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Status</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.name")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">{t("forms.sector")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.size")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.status")}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -342,7 +346,7 @@ export default function Accounts() {
       </SlideOver>
 
       {/* Form */}
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "New account" : "Edit account"}>
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.accounts.newAccount") : `${t("common.edit")} ${t("forms.account")}`}>
         {editing !== null && (
           <AccountForm initial={editing === "new" ? null : editing} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}

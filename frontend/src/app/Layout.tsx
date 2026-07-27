@@ -27,57 +27,56 @@ import {
   Truck,
 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
+import { useLanguage } from "./context/LanguageContext";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/prospects", label: "Prospects", icon: UserPlus },
-  { to: "/contacts", label: "Contacts", icon: Contact },
-  { to: "/accounts", label: "Accounts", icon: Building2 },
-  { to: "/deals", label: "Deals", icon: Handshake },
-  { to: "/tasks", label: "Tasks", icon: CheckSquare },
-  { to: "/calendar", label: "Calendar", icon: Calendar },
-  { to: "/calls", label: "Calls", icon: Phone },
-  { to: "/meetings", label: "Meetings", icon: Video },
-  { to: "/tickets", label: "Tickets", icon: Ticket },
-  { to: "/quotes",   label: "Devis",    icon: FileText },
-  { to: "/invoices", label: "Factures", icon: Receipt },
-  { to: "/orders",   label: "Orders",   icon: Package },
-  { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
-  { to: "/deliveries", label: "Deliveries", icon: Truck },
+  { to: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, end: true },
+  { to: "/prospects", labelKey: "nav.prospects", icon: UserPlus },
+  { to: "/contacts", labelKey: "nav.contacts", icon: Contact },
+  { to: "/accounts", labelKey: "nav.accounts", icon: Building2 },
+  { to: "/deals", labelKey: "nav.deals", icon: Handshake },
+  { to: "/tasks", labelKey: "nav.tasks", icon: CheckSquare },
+  { to: "/calendar", labelKey: "nav.calendar", icon: Calendar },
+  { to: "/calls", labelKey: "nav.calls", icon: Phone },
+  { to: "/meetings", labelKey: "nav.meetings", icon: Video },
+  { to: "/tickets", labelKey: "nav.tickets", icon: Ticket },
+  { to: "/quotes",   labelKey: "nav.quotes",    icon: FileText },
+  { to: "/invoices", labelKey: "nav.invoices", icon: Receipt },
+  { to: "/orders",   labelKey: "nav.orders",   icon: Package },
+  { to: "/purchase-orders", labelKey: "nav.purchaseOrders", icon: ShoppingCart },
+  { to: "/deliveries", labelKey: "nav.deliveries", icon: Truck },
 ];
 
 const NAV_SYSTEM = [
-  { to: "/search", label: "Search", icon: Search },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/search", labelKey: "nav.search", icon: Search },
+  { to: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 const NAV_ADMIN = [
-  { to: "/admin/users",    label: "Users",         icon: Users },
-  { to: "/admin/activity", label: "Activity Log",  icon: Activity },
+  { to: "/admin/users",    labelKey: "nav.users",         icon: Users },
+  { to: "/admin/activity", labelKey: "nav.activityLog",  icon: Activity },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
-  "/": "Dashboard",
-  "/prospects": "Prospects",
-  "/contacts": "Contacts",
-  "/accounts": "Accounts",
-  "/deals": "Deals",
-  "/tasks": "Tasks",
-  "/calendar": "Calendar",
-  "/calls": "Calls",
-  "/meetings": "Meetings",
-  "/tickets": "Tickets",
-  "/quotes":   "Devis",
-  "/invoices": "Factures",
-  "/orders": "Orders",
-  "/purchase-orders": "Purchase Orders",
-  "/deliveries": "Deliveries",
-  "/search": "Search",
-  "/settings": "Settings",
-  "/admin/users":    "User Management",
-  "/admin/activity": "Activity Log",
-  //"/quotes":   "Devis",
-  //"/invoices": "Factures",
+  "/": "dashboard.title",
+  "/prospects": "pages.prospects.title",
+  "/contacts": "pages.contacts.title",
+  "/accounts": "pages.accounts.title",
+  "/deals": "pages.deals.title",
+  "/tasks": "pages.tasks.title",
+  "/calendar": "nav.calendar",
+  "/calls": "pages.calls.title",
+  "/meetings": "pages.meetings.title",
+  "/tickets": "pages.tickets.title",
+  "/quotes":   "pages.quotes.title",
+  "/invoices": "pages.invoices.title",
+  "/orders": "pages.orders.title",
+  "/purchase-orders": "pages.purchaseOrders.title",
+  "/deliveries": "pages.deliveries.title",
+  "/search": "nav.search",
+  "/settings": "nav.settings",
+  "/admin/users":    "pages.userManagement.title",
+  "/admin/activity": "nav.activityLog",
 };
 
 function getInitials(name: string) {
@@ -93,17 +92,18 @@ function getInitials(name: string) {
 
 function SideNavLink({
   to,
-  label,
+  labelKey,
   icon: Icon,
   end,
   onClick,
 }: {
   to: string;
-  label: string;
+  labelKey: string;
   icon: React.ElementType;
   end?: boolean;
   onClick?: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <NavLink
       to={to}
@@ -123,7 +123,7 @@ function SideNavLink({
             className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-blue-400" : ""}`}
             strokeWidth={1.75}
           />
-          {label}
+          {t(labelKey)}
           {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
         </>
       )}
@@ -139,10 +139,11 @@ function SidebarContent({
   onNavClick?: () => void;
 }) {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const initials = user ? getInitials(user.name) : "?";
-  const roleLabel = user?.role === "admin" ? "Admin" : "Commercial";
+  const roleLabel = user?.role === "admin" ? t("nav.adminRole") : t("nav.commercialRole");
 
   const handleLogout = () => {
     logout();
@@ -163,28 +164,28 @@ function SidebarContent({
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto scrollbar-none">
-        {NAV_ITEMS.map(({ to, label, icon, end }) => (
-          <SideNavLink key={to} to={to} label={label} icon={icon} end={end} onClick={onNavClick} />
+        {NAV_ITEMS.map(({ to, labelKey, icon, end }) => (
+          <SideNavLink key={to} to={to} labelKey={labelKey} icon={icon} end={end} onClick={onNavClick} />
         ))}
 
         <div className="pt-3 pb-1">
           <p className="px-3 text-[10px] uppercase tracking-widest text-zinc-600 font-medium mb-1">
-            System
+            {t("nav.system")}
           </p>
         </div>
-        {NAV_SYSTEM.map(({ to, label, icon }) => (
-          <SideNavLink key={to} to={to} label={label} icon={icon} onClick={onNavClick} />
+        {NAV_SYSTEM.map(({ to, labelKey, icon }) => (
+          <SideNavLink key={to} to={to} labelKey={labelKey} icon={icon} onClick={onNavClick} />
         ))}
 
         {user?.role === "admin" && (
           <>
             <div className="pt-3 pb-1">
               <p className="px-3 text-[10px] uppercase tracking-widest text-zinc-600 font-medium mb-1">
-                Admin
+                {t("nav.admin")}
               </p>
             </div>
-            {NAV_ADMIN.map(({ to, label, icon }) => (
-              <SideNavLink key={to} to={to} label={label} icon={icon} onClick={onNavClick} />
+            {NAV_ADMIN.map(({ to, labelKey, icon }) => (
+              <SideNavLink key={to} to={to} labelKey={labelKey} icon={icon} onClick={onNavClick} />
             ))}
           </>
         )}
@@ -206,7 +207,7 @@ function SidebarContent({
           </div>
           <button
             onClick={handleLogout}
-            title="Sign out"
+            title={t("nav.logout")}
             className="text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <LogOut className="w-4 h-4" strokeWidth={1.75} />
@@ -224,6 +225,7 @@ export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   // Close drawer on route change
   useEffect(() => {
@@ -238,7 +240,8 @@ export default function Layout() {
     };
   }, [drawerOpen]);
 
-  const pageTitle = PAGE_TITLES[location.pathname] ?? "Dashboard";
+  const pageTitleKey = PAGE_TITLES[location.pathname] ?? "dashboard.title";
+  const pageTitle = t(pageTitleKey);
   const initials = user ? getInitials(user.name) : "?";
 
   return (

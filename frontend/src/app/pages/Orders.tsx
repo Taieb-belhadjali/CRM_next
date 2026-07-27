@@ -9,6 +9,7 @@ import {
   type Account, type Contact, type Quote, type Invoice,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -26,14 +27,11 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
   cancelled:  "bg-red-50 text-red-600 border-red-200",
 };
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "En attente", confirmed: "Confirmée", fulfilled: "Exécutée", cancelled: "Annulée",
-};
-
 function StatusBadge({ status }: { status: OrderStatus }) {
+  const { t } = useLanguage();
   return (
     <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_STYLES[status]}`}>
-      {STATUS_LABELS[status]}
+      {t("status." + status)}
     </span>
   );
 }
@@ -42,18 +40,19 @@ function fmt(n: number) {
   return n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
-const TRANSITIONS: Record<OrderStatus, { label: string; next: OrderStatus; icon: React.ElementType; cls: string }[]> = {
-  pending:   [{ label: "Confirmer", next: "confirmed", icon: CheckCircle, cls: "bg-blue-50 text-blue-600 hover:bg-blue-100" }],
-  confirmed: [{ label: "Marquer exécutée", next: "fulfilled", icon: Send, cls: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" },
-              { label: "Annuler", next: "cancelled", icon: XCircle, cls: "bg-red-50 text-red-600 hover:bg-red-100" }],
-  fulfilled: [{ label: "Remettre en attente", next: "pending", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
-  cancelled: [{ label: "Remettre en attente", next: "pending", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
+const TRANSITIONS: Record<OrderStatus, { labelKey: string; next: OrderStatus; icon: React.ElementType; cls: string }[]> = {
+  pending:   [{ labelKey: "pages.orders.transitionConfirm", next: "confirmed", icon: CheckCircle, cls: "bg-blue-50 text-blue-600 hover:bg-blue-100" }],
+  confirmed: [{ labelKey: "pages.orders.transitionFulfill", next: "fulfilled", icon: Send, cls: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" },
+              { labelKey: "common.cancel", next: "cancelled", icon: XCircle, cls: "bg-red-50 text-red-600 hover:bg-red-100" }],
+  fulfilled: [{ labelKey: "pages.orders.transitionReopen", next: "pending", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
+  cancelled: [{ labelKey: "pages.orders.transitionReopen", next: "pending", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
 };
 
 function OrderForm({ initial, accounts, contacts, onSave, onCancel, token }: {
   initial?: Order | null; accounts: Account[]; contacts: Contact[];
   onSave: (o: Order) => void; onCancel: () => void; token: string;
 }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<OrderPayload>({
     title:      initial?.title      ?? "",
     status:     initial?.status     ?? "pending",
@@ -74,77 +73,77 @@ function OrderForm({ initial, accounts, contacts, onSave, onCancel, token }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title?.trim()) { setError("Le titre est requis."); return; }
+    if (!form.title?.trim()) { setError(t("errors.titleRequired")); return; }
     setError(""); setLoading(true);
     try {
       const payload = { ...form, account: form.account || null, contact: form.contact || null, sourceId: form.sourceId || null };
       const res = initial ? await updateOrder(token, initial._id, payload) : await createOrder(token, payload);
       onSave(res.order);
-    } catch (err) { setError(err instanceof Error ? err.message : "Une erreur est survenue."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.genericError")); }
     finally { setLoading(false); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <FormField label="Titre" required>
-        <input className={inputCls} value={form.title} onChange={set("title")} placeholder="Commande client" />
+      <FormField label={t("forms.title")} required>
+        <input className={inputCls} value={form.title} onChange={set("title")} placeholder={t("forms.orderPlaceholder")} />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Statut">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status} onChange={set("status")}>
             {(["pending","confirmed","fulfilled","cancelled"] as OrderStatus[]).map((s) =>
-              <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              <option key={s} value={s}>{t("status." + s)}</option>)}
           </select>
         </FormField>
-        <FormField label="Source">
+        <FormField label={t("forms.source")}>
           <select className={selectCls} value={form.sourceType ?? ""} onChange={set("sourceType")}>
-            <option value="">— Aucune —</option>
-            <option value="quote">Devis</option>
-            <option value="invoice">Facture</option>
+            <option value="">{t("pages.orders.noSource")}</option>
+            <option value="quote">{t("forms.quote")}</option>
+            <option value="invoice">{t("forms.invoice")}</option>
           </select>
         </FormField>
       </div>
       {form.sourceType === "quote" && (
-        <FormField label="Devis source">
+        <FormField label={t("forms.quoteSource")}>
           <select className={selectCls} value={form.sourceId ?? ""} onChange={set("sourceId")}>
-            <option value="">— Sélectionner —</option>
+            <option value="">{t("pages.orders.selectSource")}</option>
           </select>
         </FormField>
       )}
       {form.sourceType === "invoice" && (
-        <FormField label="Facture source">
+        <FormField label={t("forms.invoiceSource")}>
           <select className={selectCls} value={form.sourceId ?? ""} onChange={set("sourceId")}>
-            <option value="">— Sélectionner —</option>
+            <option value="">{t("pages.orders.selectSource")}</option>
           </select>
         </FormField>
       )}
-      <FormField label="Client (compte)">
+      <FormField label={t("forms.client")}>
         <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
-          <option value="">— Aucun —</option>
+          <option value="">{t("pages.orders.noAccountSelect")}</option>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
         </select>
       </FormField>
-      <FormField label="Contact">
+      <FormField label={t("forms.contact")}>
         <select className={selectCls} value={form.contact ?? ""} onChange={set("contact")}>
-          <option value="">— Aucun —</option>
+          <option value="">{t("pages.orders.noAccountSelect")}</option>
           {contacts.map((c) => <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>)}
         </select>
       </FormField>
       <div>
-        <p className="text-xs font-medium text-zinc-700 mb-2">Lignes de commande</p>
+        <p className="text-xs font-medium text-zinc-700 mb-2">{t("forms.orderLineItems")}</p>
         <LineItemEditor items={form.lineItems ?? []} onChange={(li) => setForm((p) => ({ ...p, lineItems: li }))} />
       </div>
-      <FormField label="Notes">
-        <textarea className={inputCls} rows={2} value={form.notes ?? ""} onChange={set("notes")} placeholder="Remarques…" />
+      <FormField label={t("forms.notes")}>
+        <textarea className={inputCls} rows={2} value={form.notes ?? ""} onChange={set("notes")} placeholder={t("forms.notesPlaceholder")} />
       </FormField>
-      <FormField label="Conditions">
-        <textarea className={inputCls} rows={2} value={form.terms ?? ""} onChange={set("terms")} placeholder="Conditions de livraison…" />
+      <FormField label={t("forms.terms")}>
+        <textarea className={inputCls} rows={2} value={form.terms ?? ""} onChange={set("terms")} placeholder={t("forms.deliveryTermsPlaceholder")} />
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Annuler</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Enregistrer" : "Créer la commande"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("pages.orders.newOrder")}
         </button>
       </div>
     </form>
@@ -156,6 +155,7 @@ function OrderDetail({ order, token, onEdit, onDelete, onUpdated }: {
   onEdit: () => void; onDelete: () => void;
   onUpdated: (o: Order) => void;
 }) {
+  const { t } = useLanguage();
   const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -164,7 +164,7 @@ function OrderDetail({ order, token, onEdit, onDelete, onUpdated }: {
     try {
       const res = await updateOrder(token, order._id, { status: next });
       onUpdated(res.order);
-    } catch { setError("Status update failed."); }
+    } catch { setError(t("errors.statusUpdateFailed")); }
     finally { setStatusLoading(false); }
   };
 
@@ -183,25 +183,25 @@ function OrderDetail({ order, token, onEdit, onDelete, onUpdated }: {
         <StatusBadge status={order.status} />
       </div>
       <div>
-        <DetailRow label="Client" value={accountName ?? contactName} />
-        <DetailRow label="Source" value={order.sourceType ? (order.sourceType === "quote" ? "Devis" : "Facture") : undefined} />
-        <DetailRow label="Propriétaire" value={order.owner?.name} />
+        <DetailRow label={t("forms.client")} value={accountName ?? contactName} />
+        <DetailRow label={t("forms.source")} value={order.sourceType ? (order.sourceType === "quote" ? t("pages.orders.sourceQuote") : t("pages.orders.sourceInvoice")) : undefined} />
+        <DetailRow label={t("forms.owner")} value={order.owner?.name} />
       </div>
       <div>
-        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-3">Lignes de commande</p>
+        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-3">{t("forms.orderLineItems")}</p>
         <LineItemEditor items={order.lineItems} onChange={() => {}} readOnly />
       </div>
-      {order.notes && <DetailRow label="Notes" value={order.notes} />}
-      {order.terms && <DetailRow label="Conditions" value={order.terms} />}
+      {order.notes && <DetailRow label={t("forms.notes")} value={order.notes} />}
+      {order.terms && <DetailRow label={t("forms.terms")} value={order.terms} />}
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       {TRANSITIONS[order.status]?.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {TRANSITIONS[order.status].map((t) => {
-            const Icon = t.icon;
+          {TRANSITIONS[order.status].map((tr) => {
+            const Icon = tr.icon;
             return (
-              <button key={t.next} onClick={() => handleStatus(t.next)} disabled={statusLoading}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${t.cls}`}>
-                <Icon className="w-3.5 h-3.5" strokeWidth={1.75} /> {t.label}
+              <button key={tr.next} onClick={() => handleStatus(tr.next)} disabled={statusLoading}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${tr.cls}`}>
+                <Icon className="w-3.5 h-3.5" strokeWidth={1.75} /> {t(tr.labelKey)}
               </button>
             );
           })}
@@ -210,11 +210,11 @@ function OrderDetail({ order, token, onEdit, onDelete, onUpdated }: {
       <div className="flex flex-wrap gap-2 pt-1">
         <button onClick={onEdit}
           className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> Modifier
+          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.edit")}
         </button>
         <button onClick={onDelete}
           className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Supprimer
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.delete")}
         </button>
       </div>
     </div>
@@ -225,6 +225,7 @@ function SourcePicker({ sourceType, sources, token, onDone, onCancel }: {
   sourceType: "quote" | "invoice"; sources: Quote[] | Invoice[];
   token: string; onDone: (o: Order) => void; onCancel: () => void;
 }) {
+  const { t } = useLanguage();
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -235,7 +236,7 @@ function SourcePicker({ sourceType, sources, token, onDone, onCancel }: {
     try {
       const res = await convertToOrder(token, sourceType, selectedId);
       onDone(res.order);
-    } catch (err) { setError(err instanceof Error ? err.message : "Conversion failed."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.conversionFailed")); }
     finally { setLoading(false); }
   };
 
@@ -246,19 +247,21 @@ function SourcePicker({ sourceType, sources, token, onDone, onCancel }: {
           <ArrowRightCircle className="w-5 h-5 text-blue-500" strokeWidth={1.75} />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-zinc-900">Convertir en commande</h3>
-          <p className="text-sm text-zinc-500 mt-1">Sélectionnez un {sourceType === "quote" ? "devis accepté" : "facture"} à convertir.</p>
+          <h3 className="text-base font-semibold text-zinc-900">{t("pages.orders.convertToOrder")}</h3>
+          <p className="text-sm text-zinc-500 mt-1">
+            {t("pages.orders.selectSource", { sourceType: sourceType === "quote" ? t("pages.orders.sourceQuote") : t("pages.orders.sourceInvoice") })}
+          </p>
         </div>
         <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}
           className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-          <option value="">— Sélectionner —</option>
+          <option value="">{t("pages.orders.selectSource")}</option>
           {sources.map((s) => <option key={s._id} value={s._id}>{s.number} – {s.title}</option>)}
         </select>
         {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Annuler</button>
+          <button onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
           <button onClick={handle} disabled={!selectedId || loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-            {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Convertir"}
+            {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : t("pages.orders.convert")}
           </button>
         </div>
       </div>
@@ -268,6 +271,7 @@ function SourcePicker({ sourceType, sources, token, onDone, onCancel }: {
 
 export default function Orders() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [orders, setOrders]     = useState<Order[]>([]);
   const [total, setTotal]       = useState(0);
   const [page, setPage]         = useState(1);
@@ -328,7 +332,7 @@ export default function Orders() {
       setTotal((n) => n - 1);
       if (selected?._id === deleting._id) setSelected(null);
       setDeleting(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("errors.deleteFailed")); }
     finally { setDeleteLoading(false); }
   };
 
@@ -342,32 +346,32 @@ export default function Orders() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Commandes</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.orders.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} commande{total !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setConvertingSourceType("quote")}
             className="flex items-center gap-2 px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium rounded-lg transition-colors">
-            <ArrowRightCircle className="w-4 h-4" strokeWidth={1.75} /> Depuis devis
+            <ArrowRightCircle className="w-4 h-4" strokeWidth={1.75} /> {t("pages.orders.fromQuote")}
           </button>
           <button onClick={() => setConvertingSourceType("invoice")}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors">
-            <ArrowRightCircle className="w-4 h-4" strokeWidth={1.75} /> Depuis facture
+            <ArrowRightCircle className="w-4 h-4" strokeWidth={1.75} /> {t("pages.orders.fromInvoice")}
           </button>
           <button onClick={() => setEditing("new")}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-            <Plus className="w-4 h-4" strokeWidth={1.75} /> Nouvelle commande
+            <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.orders.newOrder")}
           </button>
         </div>
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder="Rechercher une commande…" /></div>
+        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.orders.searchPlaceholder")} /></div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-          <option value="">Tous les statuts</option>
+          <option value="">{t("pages.orders.allStatuses")}</option>
           {(["pending","confirmed","fulfilled","cancelled"] as OrderStatus[]).map((s) =>
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+            <option key={s} value={s}>{t("status." + s)}</option>)}
         </select>
       </div>
 
@@ -379,18 +383,18 @@ export default function Orders() {
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Package className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">Aucune commande.</p>
+            <p className="text-sm text-zinc-400">{t("pages.orders.noOrders")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Référence</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden md:table-cell">Client</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Statut</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Source</th>
-                <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Total TTC</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Date</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("pages.orders.reference")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden md:table-cell">{t("forms.client")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">{t("forms.status")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("forms.source")}</th>
+                <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("pages.orders.totalIncTax")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("forms.date")}</th>
                 <th className="px-5 py-3 border-l border-zinc-100" />
               </tr>
             </thead>
@@ -408,7 +412,7 @@ export default function Orders() {
                     </td>
                     <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden md:table-cell">{accountName ?? contactName ?? "—"}</td>
                     <td className="px-5 py-3.5 border-l border-zinc-100"><StatusBadge status={o.status} /></td>
-                    <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">{o.sourceType ? (o.sourceType === "quote" ? "Devis" : "Facture") : "—"}</td>
+                    <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">{o.sourceType ? (o.sourceType === "quote" ? t("pages.orders.sourceQuote") : t("pages.orders.sourceInvoice")) : "—"}</td>
                     <td className="px-5 py-3.5 text-right font-semibold text-zinc-700 border-l border-zinc-100 hidden lg:table-cell">{fmt(o.grandTotal)}</td>
                     <td className="px-5 py-3.5 text-zinc-500 border-l border-zinc-100 hidden lg:table-cell">{o.createdAt ? new Date(o.createdAt).toLocaleDateString("fr-FR") : "—"}</td>
                     <td className="px-5 py-3.5 text-right border-l border-zinc-100" onClick={(e) => e.stopPropagation()}>
@@ -436,7 +440,7 @@ export default function Orders() {
         )}
       </SlideOver>
 
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "Nouvelle commande" : "Modifier la commande"} width="w-[600px]">
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.orders.newOrder") : t("pages.orders.editOrder")} width="w-[600px]">
         {editing !== null && (
           <OrderForm initial={editing === "new" ? null : editing} accounts={accounts} contacts={contacts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}

@@ -1013,3 +1013,94 @@ export function updateDelivery(token: string, id: string, payload: Partial<Deliv
 export function deleteDelivery(token: string, id: string) {
   return request<{ message: string }>(`/api/deliveries/${id}`, { method: "DELETE" }, token);
 }
+
+// ── Search ─────────────────────────────────────────────────────────────────────
+
+export type SearchResultType = "contact" | "account" | "prospect" | "deal" | "ticket";
+
+export interface SearchResult {
+  type: SearchResultType;
+  _id: string;
+  [key: string]: any;
+}
+
+export interface SavedSearch {
+  _id: string;
+  query: string;
+  filters?: Record<string, any> | null;
+  createdAt: string;
+}
+
+export function searchGlobal(token: string, query: string) {
+  return request<{ results: SearchResult[] }>(`/api/search?q=${encodeURIComponent(query)}`, {}, token);
+}
+
+export function listSavedSearches(token: string) {
+  return request<{ searches: SavedSearch[] }>("/api/saved-searches", {}, token);
+}
+export function createSavedSearch(token: string, query: string, filters?: Record<string, any>) {
+  return request<{ search: SavedSearch }>("/api/saved-searches", { method: "POST", body: JSON.stringify({ query, filters }) }, token);
+}
+export function deleteSavedSearch(token: string, id: string) {
+  return request<{ message: string }>(`/api/saved-searches/${id}`, { method: "DELETE" }, token);
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+export interface DashboardKpis {
+  openDeals: number;
+  tasksDueToday: number;
+  callsScheduled: number;
+  newProspectsThisWeek: number;
+}
+
+export interface PipelineStage {
+  key: string;
+  label: string;
+  count: number;
+  value: number;
+}
+
+export interface DashboardTask {
+  _id: string;
+  title: string;
+  dueDate: string;
+  priority: string;
+  status: string;
+  assignee?: { name: string } | null;
+}
+
+export interface DashboardActivity {
+  _id: string;
+  action: string;
+  entity: string | null;
+  entityLabel: string | null;
+  userName: string | null;
+  userEmail: string | null;
+  createdAt: string;
+}
+
+export interface DashboardData {
+  kpis: DashboardKpis;
+  pipeline: PipelineStage[];
+  tasksDueToday: DashboardTask[];
+  recentActivity: DashboardActivity[];
+}
+
+export function getDashboard(token: string, scope = "own") {
+  return request<DashboardData>(`/api/dashboard?scope=${scope}`, {}, token);
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+export interface SettingsData {
+  timezone: string;
+  language: string;
+}
+
+export function getSettings(token: string) {
+  return request<SettingsData>("/api/settings", {}, token);
+}
+export function updateSettings(token: string, data: Partial<SettingsData>) {
+  return request<SettingsData>("/api/settings", { method: "PATCH", body: JSON.stringify(data) }, token);
+}

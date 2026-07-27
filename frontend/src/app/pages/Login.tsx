@@ -3,10 +3,12 @@ import { useNavigate, Link } from "react-router";
 import { Zap, Eye, EyeOff, ArrowRight, Lock, Mail } from "lucide-react";
 import { loginApi } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -16,7 +18,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError("Please enter your email and password.");
+      setError(t("errors.emailRequired"));
       return;
     }
     setError("");
@@ -108,13 +110,13 @@ export default function Login() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-zinc-900">Welcome back</h2>
-            <p className="text-zinc-500 text-sm mt-1.5">Sign in to your workspace to continue.</p>
+            <h2 className="text-2xl font-bold text-zinc-900">{t("login.title")}</h2>
+            <p className="text-zinc-500 text-sm mt-1.5">{t("login.subtitle")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1.5">Email address</label>
+              <label className="block text-xs font-medium text-zinc-700 mb-1.5">{t("forms.email")}</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
                 <input
@@ -130,9 +132,9 @@ export default function Login() {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-zinc-700">Password</label>
+                <label className="block text-xs font-medium text-zinc-700">{t("forms.password")}</label>
                 <button type="button" className="text-xs text-blue-500 hover:text-blue-600 transition-colors">
-                  Forgot password?
+                  {t("login.forgotPassword")}
                 </button>
               </div>
               <div className="relative">
@@ -167,16 +169,16 @@ export default function Login() {
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <>Sign in <ArrowRight className="w-4 h-4" /></>
+                <>{t("login.signIn")} <ArrowRight className="w-4 h-4" /></>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-zinc-200">
             <p className="text-xs text-zinc-400 text-center">
-              Need an account?{" "}
+              {t("login.noAccount")}{" "}
               <Link to="/register" className="text-blue-500 hover:text-blue-600 font-medium transition-colors">
-                Register
+                {t("login.signUp")}
               </Link>
             </p>
           </div>

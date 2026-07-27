@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, CheckCircle2, Circle, Pencil, Trash2, Clock, CheckSquare } from "lucide-react";
 import { listTasks, createTask, updateTask, deleteTask, listUsers, type Task, type TaskPayload, type TaskPriority, type TaskStatus, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -19,9 +20,10 @@ const PRIORITY_STYLES: Record<TaskPriority, string> = {
 const STATUS_OPTIONS: TaskStatus[]   = ["todo", "in_progress", "done"];
 const PRIORITY_OPTIONS: TaskPriority[] = ["high", "medium", "low"];
 
-// ── Form ──────────────────────────────────────────────────────────────────────
+// ── Form ──────────────────────────────────────────────────────────────
 
 function TaskForm({ initial, users, onSave, onCancel, token }: { initial?: Task | null; users: AdminUser[]; onSave: (t: Task) => void; onCancel: () => void; token: string }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<TaskPayload>({
     title:       initial?.title       ?? "",
     description: initial?.description ?? "",
@@ -50,25 +52,25 @@ function TaskForm({ initial, users, onSave, onCancel, token }: { initial?: Task 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Title" required>
+      <FormField label={t("forms.title")} required>
         <input className={inputCls} value={form.title} onChange={set("title")} placeholder="Send proposal to Acme Corp" />
       </FormField>
-      <FormField label="Description">
+      <FormField label={t("forms.description")}>
         <textarea className={inputCls} rows={3} value={form.description ?? ""} onChange={set("description")} placeholder="Details…" />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Priority">
+        <FormField label={t("forms.priority")}>
           <select className={selectCls} value={form.priority} onChange={set("priority")}>
             {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
           </select>
         </FormField>
-        <FormField label="Status">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status} onChange={set("status")}>
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? t("status.inProgress") : s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
           </select>
         </FormField>
       </div>
-      <FormField label="Due date">
+      <FormField label={t("forms.dueDate")}>
         <input className={inputCls} type="date" value={form.dueDate ?? ""} onChange={set("dueDate")} />
       </FormField>
       <FormField label="Assignee">
@@ -79,18 +81,19 @@ function TaskForm({ initial, users, onSave, onCancel, token }: { initial?: Task 
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Create task"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("common.create")}
         </button>
       </div>
     </form>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────
 
 export default function Tasks() {
+  const { t } = useLanguage();
   const { token } = useAuth();
   const [tasks, setTasks]     = useState<Task[]>([]);
   const [total, setTotal]     = useState(0);
@@ -160,19 +163,19 @@ export default function Tasks() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Tasks</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.tasks.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} task{total !== 1 ? "s" : ""}</p>
         </div>
         <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> New task
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.tasks.newTask")}
         </button>
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder="Search tasks…" /></div>
+        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.tasks.searchPlaceholder")} /></div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
           <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "in_progress" ? t("status.inProgress") : s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
         </select>
         <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
           <option value="">All priorities</option>
@@ -188,7 +191,7 @@ export default function Tasks() {
         ) : tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <CheckSquare className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">No tasks found.</p>
+            <p className="text-sm text-zinc-400">{t("pages.tasks.noTasks")}</p>
           </div>
         ) : (
           <div className="divide-y divide-zinc-50">
@@ -226,7 +229,7 @@ export default function Tasks() {
 
       <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
 
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "New task" : "Edit task"}>
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.tasks.newTask") : t("common.edit")}>
         {editing !== null && <TaskForm initial={editing === "new" ? null : editing} users={users} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />}
       </SlideOver>
 

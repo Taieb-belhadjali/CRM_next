@@ -9,6 +9,7 @@ import {
   type Account, type Contact,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -26,14 +27,11 @@ const STATUS_STYLES: Record<PurchaseOrderStatus, string> = {
   cancelled:"bg-red-50 text-red-600 border-red-200",
 };
 
-const STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
-  pending: "En attente", ordered: "Commandé", received: "Reçu", cancelled: "Annulé",
-};
-
 function StatusBadge({ status }: { status: PurchaseOrderStatus }) {
+  const { t } = useLanguage();
   return (
     <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_STYLES[status]}`}>
-      {STATUS_LABELS[status]}
+      {t("status." + status)}
     </span>
   );
 }
@@ -42,18 +40,21 @@ function fmt(n: number) {
   return n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
-const TRANSITIONS: Record<PurchaseOrderStatus, { label: string; next: PurchaseOrderStatus; icon: React.ElementType; cls: string }[]> = {
-  pending:  [{ label: "Commander", next: "ordered", icon: Send, cls: "bg-blue-50 text-blue-600 hover:bg-blue-100" }],
-  ordered:  [{ label: "Marquer reçu", next: "received", icon: CheckCircle, cls: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" },
-             { label: "Annuler", next: "cancelled", icon: XCircle, cls: "bg-red-50 text-red-600 hover:bg-red-100" }],
-  received: [{ label: "Remettre en attente", next: "pending", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
-  cancelled:[{ label: "Remettre en attente", next: "pending", icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
-};
+function getStatusTransitions(t: (key: string) => string) {
+  return {
+    pending:  [{ label: t("pages.purchaseOrders.statusOrder"), next: "ordered" as PurchaseOrderStatus, icon: Send, cls: "bg-blue-50 text-blue-600 hover:bg-blue-100" }],
+    ordered:  [{ label: t("pages.purchaseOrders.statusMarkReceived"), next: "received" as PurchaseOrderStatus, icon: CheckCircle, cls: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" },
+               { label: t("common.cancel"), next: "cancelled" as PurchaseOrderStatus, icon: XCircle, cls: "bg-red-50 text-red-600 hover:bg-red-100" }],
+    received: [{ label: t("pages.purchaseOrders.statusResetPending"), next: "pending" as PurchaseOrderStatus, icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
+    cancelled:[{ label: t("pages.purchaseOrders.statusResetPending"), next: "pending" as PurchaseOrderStatus, icon: RefreshCw, cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
+  };
+}
 
 function PurchaseOrderForm({ initial, accounts, contacts, onSave, onCancel, token }: {
   initial?: PurchaseOrder | null; accounts: Account[]; contacts: Contact[];
   onSave: (po: PurchaseOrder) => void; onCancel: () => void; token: string;
 }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<PurchaseOrderPayload>({
     title:      initial?.title      ?? "",
     status:     initial?.status     ?? "pending",
@@ -72,57 +73,57 @@ function PurchaseOrderForm({ initial, accounts, contacts, onSave, onCancel, toke
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title?.trim()) { setError("Le titre est requis."); return; }
-    if (!form.supplier?.trim()) { setError("Le fournisseur est requis."); return; }
+    if (!form.title?.trim()) { setError(t("errors.titleRequired")); return; }
+    if (!form.supplier?.trim()) { setError(t("errors.supplierRequired")); return; }
     setError(""); setLoading(true);
     try {
       const payload = { ...form, account: form.account || null, contact: form.contact || null };
       const res = initial ? await updatePurchaseOrder(token, initial._id, payload) : await createPurchaseOrder(token, payload);
       onSave(res.purchaseOrder);
-    } catch (err) { setError(err instanceof Error ? err.message : "Une erreur est survenue."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.genericError")); }
     finally { setLoading(false); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <FormField label="Titre" required>
-        <input className={inputCls} value={form.title} onChange={set("title")} placeholder="Bon de commande fournisseur" />
+      <FormField label={t("forms.title")} required>
+        <input className={inputCls} value={form.title} onChange={set("title")} placeholder={t("forms.purchaseOrderPlaceholder")} />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Statut">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status} onChange={set("status")}>
             {(["pending","ordered","received","cancelled"] as PurchaseOrderStatus[]).map((s) =>
-              <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              <option key={s} value={s}>{t("status." + s)}</option>)}
           </select>
         </FormField>
-        <FormField label="Fournisseur" required>
-          <input className={inputCls} value={form.supplier} onChange={set("supplier")} placeholder="Nom du fournisseur" />
+        <FormField label={t("forms.supplier")} required>
+          <input className={inputCls} value={form.supplier} onChange={set("supplier")} placeholder={t("forms.supplierPlaceholder")} />
         </FormField>
       </div>
-      <FormField label="Client (compte)">
+      <FormField label={`${t("forms.client")} (${t("forms.account")})`}>
         <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
           <option value="">— Aucun —</option>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
         </select>
       </FormField>
-      <FormField label="Contact">
+      <FormField label={t("forms.contact")}>
         <select className={selectCls} value={form.contact ?? ""} onChange={set("contact")}>
           <option value="">— Aucun —</option>
           {contacts.map((c) => <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>)}
         </select>
       </FormField>
       <div>
-        <p className="text-xs font-medium text-zinc-700 mb-2">Lignes de commande</p>
+        <p className="text-xs font-medium text-zinc-700 mb-2">{t("pages.purchaseOrders.lineItems")}</p>
         <LineItemEditor items={form.lineItems ?? []} onChange={(li) => setForm((p) => ({ ...p, lineItems: li }))} />
       </div>
-      <FormField label="Notes">
-        <textarea className={inputCls} rows={2} value={form.notes ?? ""} onChange={set("notes")} placeholder="Remarques…" />
+      <FormField label={t("forms.notes")}>
+        <textarea className={inputCls} rows={2} value={form.notes ?? ""} onChange={set("notes")} placeholder={t("forms.notesPlaceholder")} />
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Annuler</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Enregistrer" : "Créer le BC"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("forms.save") : t("pages.purchaseOrders.createPO")}
         </button>
       </div>
     </form>
@@ -134,6 +135,7 @@ function PurchaseOrderDetail({ po, token, onEdit, onDelete, onUpdated }: {
   onEdit: () => void; onDelete: () => void;
   onUpdated: (po: PurchaseOrder) => void;
 }) {
+  const { t } = useLanguage();
   const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -142,7 +144,7 @@ function PurchaseOrderDetail({ po, token, onEdit, onDelete, onUpdated }: {
     try {
       const res = await updatePurchaseOrder(token, po._id, { status: next });
       onUpdated(res.purchaseOrder);
-    } catch { setError("Status update failed."); }
+    } catch { setError(t("errors.statusUpdateFailed")); }
     finally { setStatusLoading(false); }
   };
 
@@ -157,24 +159,24 @@ function PurchaseOrderDetail({ po, token, onEdit, onDelete, onUpdated }: {
         <div>
           <p className="text-[11px] text-zinc-400 font-mono">{po.number}</p>
           <p className="text-base font-semibold text-zinc-900 mt-0.5">{po.title}</p>
-          <p className="text-xs text-zinc-500 mt-0.5">Fournisseur : {po.supplier}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{t("forms.supplier")} : {po.supplier}</p>
         </div>
         <StatusBadge status={po.status} />
       </div>
       <div>
-        <DetailRow label="Fournisseur" value={po.supplier} />
-        <DetailRow label="Client" value={accountName ?? contactName} />
-        <DetailRow label="Propriétaire" value={po.owner?.name} />
+        <DetailRow label={t("forms.supplier")} value={po.supplier} />
+        <DetailRow label={t("forms.client")} value={accountName ?? contactName} />
+        <DetailRow label={t("forms.owner")} value={po.owner?.name} />
       </div>
       <div>
-        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-3">Lignes de commande</p>
+        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-3">{t("pages.purchaseOrders.lineItems")}</p>
         <LineItemEditor items={po.lineItems} onChange={() => {}} readOnly />
       </div>
-      {po.notes && <DetailRow label="Notes" value={po.notes} />}
+      {po.notes && <DetailRow label={t("forms.notes")} value={po.notes} />}
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-      {TRANSITIONS[po.status]?.length > 0 && (
+      {getStatusTransitions(t)[po.status]?.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {TRANSITIONS[po.status].map((t) => {
+          {getStatusTransitions(t)[po.status].map((t) => {
             const Icon = t.icon;
             return (
               <button key={t.next} onClick={() => handleStatus(t.next)} disabled={statusLoading}
@@ -188,11 +190,11 @@ function PurchaseOrderDetail({ po, token, onEdit, onDelete, onUpdated }: {
       <div className="flex flex-wrap gap-2 pt-1">
         <button onClick={onEdit}
           className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> Modifier
+          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.edit")}
         </button>
         <button onClick={onDelete}
           className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Supprimer
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.delete")}
         </button>
       </div>
     </div>
@@ -201,6 +203,7 @@ function PurchaseOrderDetail({ po, token, onEdit, onDelete, onUpdated }: {
 
 export default function PurchaseOrders() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [pos, setPOs]           = useState<PurchaseOrder[]>([]);
   const [total, setTotal]       = useState(0);
   const [page, setPage]         = useState(1);
@@ -256,7 +259,7 @@ export default function PurchaseOrders() {
       setTotal((n) => n - 1);
       if (selected?._id === deleting._id) setSelected(null);
       setDeleting(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("errors.deleteFailed")); }
     finally { setDeleteLoading(false); }
   };
 
@@ -264,22 +267,22 @@ export default function PurchaseOrders() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Bons de commande</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.purchaseOrders.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} bon{total !== 1 ? "s" : ""} de commande</p>
         </div>
         <button onClick={() => setEditing("new")}
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> Nouveau BC
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.purchaseOrders.newPO")}
         </button>
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder="Rechercher un BC…" /></div>
+        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.purchaseOrders.searchPlaceholder")} /></div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-          <option value="">Tous les statuts</option>
+          <option value="">{t("pages.purchaseOrders.allStatuses")}</option>
           {(["pending","ordered","received","cancelled"] as PurchaseOrderStatus[]).map((s) =>
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+            <option key={s} value={s}>{t("status." + s)}</option>)}
         </select>
       </div>
 
@@ -291,17 +294,17 @@ export default function PurchaseOrders() {
         ) : pos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <ShoppingCart className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">Aucun bon de commande.</p>
+            <p className="text-sm text-zinc-400">{search ? t("common.noResults") : t("pages.purchaseOrders.noPOs")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Référence</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Fournisseur</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Statut</th>
-                <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Total TTC</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Date</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("pages.purchaseOrders.reference")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">{t("forms.supplier")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">{t("forms.status")}</th>
+                <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("pages.purchaseOrders.totalIncTax")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("pages.purchaseOrders.date")}</th>
                 <th className="px-5 py-3 border-l border-zinc-100" />
               </tr>
             </thead>
@@ -340,7 +343,7 @@ export default function PurchaseOrders() {
         )}
       </SlideOver>
 
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "Nouveau BC" : "Modifier le BC"} width="w-[600px]">
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.purchaseOrders.newPO") : t("pages.purchaseOrders.editPO")} width="w-[600px]">
         {editing !== null && (
           <PurchaseOrderForm initial={editing === "new" ? null : editing} accounts={accounts} contacts={contacts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}

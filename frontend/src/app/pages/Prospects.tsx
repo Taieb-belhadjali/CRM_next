@@ -7,6 +7,7 @@ import {
   type Prospect, type ProspectPayload, type ProspectStatus,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -84,6 +85,7 @@ async function geocode(address: string): Promise<[number, number] | null> {
 interface FormProps { initial?: Prospect | null; onSave: (p: Prospect) => void; onCancel: () => void; token: string; }
 
 function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<ProspectPayload>({
     firstName: initial?.firstName ?? "", lastName: initial?.lastName ?? "",
     company: initial?.company ?? "", jobTitle: initial?.jobTitle ?? "",
@@ -121,28 +123,28 @@ function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.firstName?.trim() || !form.lastName?.trim()) { setError("First and last name are required."); return; }
+    if (!form.firstName?.trim() || !form.lastName?.trim()) { setError(t("errors.allFieldsRequired")); return; }
     setError(""); setLoading(true);
     try {
       const res = initial ? await updateProspect(token, initial._id, form) : await createProspect(token, form);
       onSave(res.prospect);
-    } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.saveFailed")); }
     finally { setLoading(false); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="First name" required><input className={inputCls} value={form.firstName} onChange={set("firstName")} placeholder="Thomas" /></FormField>
-        <FormField label="Last name" required><input className={inputCls} value={form.lastName} onChange={set("lastName")} placeholder="Huber" /></FormField>
+        <FormField label={t("forms.firstName")} required><input className={inputCls} value={form.firstName} onChange={set("firstName")} placeholder="Thomas" /></FormField>
+        <FormField label={t("forms.lastName")} required><input className={inputCls} value={form.lastName} onChange={set("lastName")} placeholder="Huber" /></FormField>
       </div>
-      <FormField label="Company"><input className={inputCls} value={form.company ?? ""} onChange={set("company")} placeholder="Acme Corp" /></FormField>
-      <FormField label="Job title"><input className={inputCls} value={form.jobTitle ?? ""} onChange={set("jobTitle")} placeholder="CTO" /></FormField>
-      <FormField label="Email"><input className={inputCls} type="email" value={form.email ?? ""} onChange={set("email")} placeholder="thomas@acme.com" /></FormField>
-      <FormField label="Phone"><input className={inputCls} value={form.phone ?? ""} onChange={set("phone")} placeholder="+33 6 00 00 00 00" /></FormField>
+      <FormField label={t("forms.company")}><input className={inputCls} value={form.company ?? ""} onChange={set("company")} placeholder="Acme Corp" /></FormField>
+      <FormField label={t("forms.jobTitle")}><input className={inputCls} value={form.jobTitle ?? ""} onChange={set("jobTitle")} placeholder="CTO" /></FormField>
+      <FormField label={t("forms.email")}><input className={inputCls} type="email" value={form.email ?? ""} onChange={set("email")} placeholder="thomas@acme.com" /></FormField>
+      <FormField label={t("forms.phone")}><input className={inputCls} value={form.phone ?? ""} onChange={set("phone")} placeholder="+33 6 00 00 00 00" /></FormField>
 
       {/* Address with geocoding indicator */}
-      <FormField label="Address">
+      <FormField label={t("forms.address")}>
         <div className="relative">
           <input
             className={inputCls}
@@ -184,12 +186,12 @@ function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Status">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status} onChange={set("status")}>
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{t("status." + s)}</option>)}
           </select>
         </FormField>
-        <FormField label="Source">
+        <FormField label={t("forms.source")}>
           <select className={selectCls} value={form.source ?? "manual"} onChange={set("source")}>
             <option value="manual">Manual</option>
             <option value="import">Import</option>
@@ -197,12 +199,12 @@ function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
           </select>
         </FormField>
       </div>
-      <FormField label="Tags"><TagInput tags={form.tags ?? []} onChange={(t) => setForm((p) => ({ ...p, tags: t }))} /></FormField>
+      <FormField label={t("forms.tags")}><TagInput tags={form.tags ?? []} onChange={(t) => setForm((p) => ({ ...p, tags: t }))} /></FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("forms.cancel")}</button>
         <button type="submit" disabled={loading || geocoding} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Create prospect"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("forms.save") : t("forms.create")}
         </button>
       </div>
     </form>
@@ -212,6 +214,7 @@ function ProspectForm({ initial, onSave, onCancel, token }: FormProps) {
 // ── Convert modal ─────────────────────────────────────────────────────────────
 
 function ConvertModal({ prospect, token, onDone, onCancel }: { prospect: Prospect; token: string; onDone: (p: Prospect) => void; onCancel: () => void; }) {
+  const { t } = useLanguage();
   const [createAcc, setCreateAcc] = useState(!!prospect.company);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -221,7 +224,7 @@ function ConvertModal({ prospect, token, onDone, onCancel }: { prospect: Prospec
     try {
       const res = await convertProspect(token, prospect._id, createAcc);
       onDone(res.prospect);
-    } catch (err) { setError(err instanceof Error ? err.message : "Conversion failed."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.saveFailed")); }
     finally { setLoading(false); }
   };
 
@@ -243,7 +246,7 @@ function ConvertModal({ prospect, token, onDone, onCancel }: { prospect: Prospec
         )}
         {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-3">{error}</p>}
         <div className="flex gap-3 mt-5">
-          <button onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+          <button onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("forms.cancel")}</button>
           <button onClick={handleConvert} disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 rounded-lg transition-colors">
             {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Convert"}
           </button>
@@ -256,6 +259,7 @@ function ConvertModal({ prospect, token, onDone, onCancel }: { prospect: Prospec
 // ── Detail panel ──────────────────────────────────────────────────────────────
 
 function ProspectDetail({ prospect, onEdit, onDelete, onConvert }: { prospect: Prospect; onEdit: () => void; onDelete: () => void; onConvert: () => void; }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between pb-4 border-b border-zinc-100">
@@ -266,16 +270,16 @@ function ProspectDetail({ prospect, onEdit, onDelete, onConvert }: { prospect: P
         <StatusBadge status={prospect.status} />
       </div>
       <div>
-        <DetailRow label="Email" value={prospect.email} />
-        <DetailRow label="Phone" value={prospect.phone} />
-        <DetailRow label="Address" value={prospect.address} />
-        <DetailRow label="Source" value={prospect.source} />
-        <DetailRow label="Owner" value={prospect.owner?.name} />
-        <DetailRow label="Added" value={new Date(prospect.createdAt).toLocaleDateString()} />
+        <DetailRow label={t("forms.email")} value={prospect.email} />
+        <DetailRow label={t("forms.phone")} value={prospect.phone} />
+        <DetailRow label={t("forms.address")} value={prospect.address} />
+        <DetailRow label={t("forms.source")} value={prospect.source} />
+        <DetailRow label={t("forms.owner")} value={prospect.owner?.name} />
+        <DetailRow label={t("forms.date")} value={new Date(prospect.createdAt).toLocaleDateString()} />
       </div>
       {prospect.tags.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-2">Tags</p>
+          <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium mb-2">{t("forms.tags")}</p>
           <div className="flex flex-wrap gap-1.5">
             {prospect.tags.map((t) => (
               <span key={t} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">{t}</span>
@@ -285,7 +289,7 @@ function ProspectDetail({ prospect, onEdit, onDelete, onConvert }: { prospect: P
       )}
       <div className="flex gap-2 pt-2 flex-wrap">
         <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> Edit
+          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("forms.edit")}
         </button>
         {prospect.status !== "converted" && (
           <button onClick={onConvert} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors">
@@ -293,7 +297,7 @@ function ProspectDetail({ prospect, onEdit, onDelete, onConvert }: { prospect: P
           </button>
         )}
         <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Delete
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("forms.delete")}
         </button>
       </div>
     </div>
@@ -304,6 +308,7 @@ function ProspectDetail({ prospect, onEdit, onDelete, onConvert }: { prospect: P
 
 export default function Prospects() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -354,7 +359,7 @@ export default function Prospects() {
       setTotal((t) => t - 1);
       if (selected?._id === deleting._id) setSelected(null);
       setDeleting(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("errors.deleteFailed")); }
     finally { setDeleteLoading(false); }
   };
 
@@ -375,11 +380,11 @@ export default function Prospects() {
         try {
           const rows = results.data as Record<string, string>[];
           const res = await importProspects(token, rows);
-          setImportMsg(`Imported ${res.inserted} prospect${res.inserted !== 1 ? "s" : ""}${res.skipped ? ` (${res.skipped} skipped)` : ""}.`);
+          setImportMsg(t("actions.prospectImport", { count: res.inserted, skipped: res.skipped || 0 }));
           // Refresh list
           const r = await listProspects(token, { search, page, limit: LIMIT, status: statusFilter || undefined, tag: tagFilter || undefined });
           setProspects(r.prospects); setTotal(r.total);
-        } catch (err) { setError(err instanceof Error ? err.message : "Import failed."); }
+        } catch (err) { setError(err instanceof Error ? err.message : t("errors.saveFailed")); }
         finally { if (fileRef.current) fileRef.current.value = ""; }
       },
     });
@@ -399,7 +404,7 @@ export default function Prospects() {
         a.click();
         URL.revokeObjectURL(a.href);
       })
-      .catch(() => setError("Export failed."));
+      .catch(() => setError(t("errors.saveFailed")));
   };
 
   return (
@@ -407,14 +412,14 @@ export default function Prospects() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Prospects</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.prospects.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} prospect{total !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
           <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
             <button onClick={() => setViewMode("list")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "list" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
-              <List className="w-3.5 h-3.5" strokeWidth={1.75} /> List
+              <List className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("pages.deals.list")}
             </button>
             <button onClick={() => setViewMode("map")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "map" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
               <Map className="w-3.5 h-3.5" strokeWidth={1.75} /> Map
@@ -428,17 +433,17 @@ export default function Prospects() {
             <Download className="w-3.5 h-3.5" strokeWidth={1.75} /> Export
           </button>
           <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-            <Plus className="w-4 h-4" strokeWidth={1.75} /> New prospect
+            <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.prospects.newProspect")}
           </button>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder="Search prospects…" /></div>
+        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.prospects.searchPlaceholder")} /></div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
           <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{t("status." + s)}</option>)}
         </select>
         <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
           <option value="">All tags</option>
@@ -466,16 +471,16 @@ export default function Prospects() {
             ) : prospects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <UserPlus className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-                <p className="text-sm text-zinc-400">{search || statusFilter || tagFilter ? "No prospects match your filters." : "No prospects yet."}</p>
+                <p className="text-sm text-zinc-400">{search || statusFilter || tagFilter ? t("common.noResults") : t("pages.prospects.noProspects")}</p>
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-zinc-100">
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Name</th>
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">Company</th>
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Status</th>
-                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Tags</th>
+                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.name")}</th>
+                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">{t("forms.company")}</th>
+                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.status")}</th>
+                    <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.tags")}</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -518,7 +523,7 @@ export default function Prospects() {
       </SlideOver>
 
       {/* Form */}
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "New prospect" : "Edit prospect"}>
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.prospects.newProspect") : t("forms.edit")}>
         {editing !== null && <ProspectForm initial={editing === "new" ? null : editing} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />}
       </SlideOver>
 

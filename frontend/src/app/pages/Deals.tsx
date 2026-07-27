@@ -19,6 +19,7 @@ import {
   type Account,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { SearchBar } from "../components/shared/SearchBar";
@@ -26,12 +27,12 @@ import { FormField, inputCls, selectCls } from "../components/shared/FormField";
 
 // ── Stage config ──────────────────────────────────────────────────────────────
 
-const STAGES: { key: DealStage; label: string; colour: string; dot: string }[] = [
-  { key: "prospection",  label: "Prospection",  colour: "bg-blue-50 border-blue-200",    dot: "bg-blue-400" },
-  { key: "proposition",  label: "Proposition",  colour: "bg-violet-50 border-violet-200", dot: "bg-violet-400" },
-  { key: "negociation",  label: "Négociation",  colour: "bg-amber-50 border-amber-200",  dot: "bg-amber-400" },
-  { key: "gagne",        label: "Gagné",        colour: "bg-emerald-50 border-emerald-200", dot: "bg-emerald-500" },
-  { key: "perdu",        label: "Perdu",        colour: "bg-red-50 border-red-200",      dot: "bg-red-400" },
+const STAGES: { key: DealStage; colour: string; dot: string }[] = [
+  { key: "prospection",  colour: "bg-blue-50 border-blue-200",    dot: "bg-blue-400" },
+  { key: "proposition",  colour: "bg-violet-50 border-violet-200", dot: "bg-violet-400" },
+  { key: "negociation",  colour: "bg-amber-50 border-amber-200",  dot: "bg-amber-400" },
+  { key: "gagne",        colour: "bg-emerald-50 border-emerald-200", dot: "bg-emerald-500" },
+  { key: "perdu",        colour: "bg-red-50 border-red-200",      dot: "bg-red-400" },
 ];
 
 function fmt(v: number) {
@@ -43,12 +44,13 @@ function fmt(v: number) {
 // ── Stage badge ───────────────────────────────────────────────────────────────
 
 function StageBadge({ stage }: { stage: string }) {
+  const { t } = useLanguage();
   const s = STAGES.find((x) => x.key === stage);
   if (!s) return null;
   return (
     <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border ${s.colour}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {s.label}
+      {t("status." + stage)}
     </span>
   );
 }
@@ -64,6 +66,7 @@ interface FormProps {
 }
 
 function DealForm({ initial, accounts, onSave, onCancel, token }: FormProps) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<DealPayload>({
     title: initial?.title ?? "",
     stage: initial?.stage ?? "prospection",
@@ -80,7 +83,7 @@ function DealForm({ initial, accounts, onSave, onCancel, token }: FormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title?.trim()) { setError("Title is required."); return; }
+    if (!form.title?.trim()) { setError(t("errors.titleRequired")); return; }
     setError(""); setLoading(true);
     try {
       const payload = {
@@ -93,40 +96,40 @@ function DealForm({ initial, accounts, onSave, onCancel, token }: FormProps) {
         ? await updateDeal(token, initial._id, payload)
         : await createDeal(token, payload);
       onSave(res.deal);
-    } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong."); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("errors.saveFailed")); }
     finally { setLoading(false); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Title" required>
-        <input className={inputCls} value={form.title} onChange={set("title")} placeholder="Deal with Acme Corp" />
+      <FormField label={t("forms.title")} required>
+        <input className={inputCls} value={form.title} onChange={set("title")} placeholder={t("forms.deal")} />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Stage">
+        <FormField label={t("forms.stage")}>
           <select className={selectCls} value={form.stage} onChange={set("stage")}>
-            {STAGES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+            {STAGES.map((s) => <option key={s.key} value={s.key}>{t("status." + s.key)}</option>)}
           </select>
         </FormField>
-        <FormField label="Value (€)">
+        <FormField label={t("forms.value")}>
           <input className={inputCls} type="number" min={0} value={form.value ?? 0}
             onChange={(e) => setForm((p) => ({ ...p, value: Number(e.target.value) }))} />
         </FormField>
       </div>
-      <FormField label="Account">
+      <FormField label={t("forms.account")}>
         <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
-          <option value="">— No account —</option>
+          <option value="">{t("forms.account")}</option>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
         </select>
       </FormField>
-      <FormField label="Expected close date">
+      <FormField label={t("forms.expectedCloseDate")}>
         <input className={inputCls} type="date" value={form.expectedCloseDate ?? ""} onChange={set("expectedCloseDate")} />
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Create deal"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("pages.deals.newDeal")}
         </button>
       </div>
     </form>
@@ -183,6 +186,7 @@ function KanbanCard({
 function KanbanColumn({
   stage, deals, onEdit, onDelete, activeId,
 }: { stage: typeof STAGES[0]; deals: Deal[]; onEdit: (d: Deal) => void; onDelete: (d: Deal) => void; activeId: string | null }) {
+  const { t } = useLanguage();
   const total = deals.reduce((s, d) => s + d.value, 0);
   const { setNodeRef, isOver } = useDroppable({ id: stage.key });
   return (
@@ -190,7 +194,7 @@ function KanbanColumn({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${stage.dot}`} />
-          <span className="text-xs font-semibold text-zinc-700">{stage.label}</span>
+          <span className="text-xs font-semibold text-zinc-700">{t("status." + stage.key)}</span>
           <span className="text-[10px] text-zinc-400 bg-zinc-100 rounded-full px-1.5 py-0.5">{deals.length}</span>
         </div>
         <span className="text-[11px] text-zinc-400 font-medium">{fmt(total)}</span>
@@ -216,6 +220,7 @@ function KanbanColumn({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Deals() {
+  const { t } = useLanguage();
   const { token } = useAuth();
   const [deals, setDeals]     = useState<Deal[]>([]);
   const [total, setTotal]     = useState(0);
@@ -276,7 +281,7 @@ export default function Deals() {
       setDeals((prev) => prev.filter((x) => x._id !== deleting._id));
       setTotal((t) => t - 1);
       setDeleting(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("errors.deleteFailed")); }
     finally { setDeleteLoading(false); }
   };
 
@@ -321,26 +326,26 @@ export default function Deals() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Deals</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.deals.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} deal{total !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
           <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
             <button onClick={() => setViewMode("kanban")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "kanban" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
-              <Kanban className="w-3.5 h-3.5" strokeWidth={1.75} /> Kanban
+              <Kanban className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("pages.deals.kanban")}
             </button>
             <button onClick={() => setViewMode("list")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "list" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
-              <List className="w-3.5 h-3.5" strokeWidth={1.75} /> List
+              <List className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("pages.deals.list")}
             </button>
           </div>
           <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-            <Plus className="w-4 h-4" strokeWidth={1.75} /> New deal
+            <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.deals.newDeal")}
           </button>
         </div>
       </div>
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search deals…" />
+      <SearchBar value={search} onChange={setSearch} placeholder={t("pages.deals.searchPlaceholder")} />
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
       {loading ? (
@@ -375,17 +380,17 @@ export default function Deals() {
           {deals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Handshake className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-              <p className="text-sm text-zinc-400">No deals yet.</p>
+              <p className="text-sm text-zinc-400">{t("pages.deals.noDeals")}</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-100">
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Title</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">Stage</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden md:table-cell">Value</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Account</th>
-                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">Close date</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.title")}</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100">{t("forms.stage")}</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden md:table-cell">{t("forms.value")}</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("forms.account")}</th>
+                  <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium border-l border-zinc-100 hidden lg:table-cell">{t("forms.expectedCloseDate")}</th>
                   <th className="px-5 py-3 border-l border-zinc-100" />
                 </tr>
               </thead>
@@ -410,7 +415,7 @@ export default function Deals() {
       )}
 
       {/* Form slide-over */}
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "New deal" : "Edit deal"}>
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.deals.newDeal") : t("forms.edit")}>
         {editing !== null && (
           <DealForm initial={editing === "new" ? null : editing} accounts={accounts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}

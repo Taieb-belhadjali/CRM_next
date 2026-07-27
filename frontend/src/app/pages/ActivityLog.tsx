@@ -8,70 +8,66 @@ import {
 } from "lucide-react";
 import { listActivity, listUsers, type ActivityLogEntry, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { Pagination } from "../components/shared/Pagination";
 
 const LIMIT = 50;
 
-// ── Action config ─────────────────────────────────────────────────────────────
-
 const ACTION_META: Record<string, {
-  label: string; icon: React.ElementType; colour: string;
-  describe: (log: ActivityLogEntry) => string;
+  labelKey: string; icon: React.ElementType; colour: string;
+  describe: (log: ActivityLogEntry, t: (key: string, params?: Record<string, string>) => string) => string;
 }> = {
-  login:            { label: "Login",              icon: LogIn,            colour: "text-emerald-600 bg-emerald-50 border-emerald-200",  describe: (l) => `${l.userName ?? l.userEmail ?? "Unknown"} signed in` },
-  logout:           { label: "Logout",             icon: LogOut,           colour: "text-zinc-500 bg-zinc-100 border-zinc-200",          describe: (l) => `${l.userName ?? l.userEmail ?? "Unknown"} signed out` },
-  register:         { label: "Register",           icon: UserPlus,         colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `New account created for ${l.entityLabel ?? l.userEmail ?? "unknown"}` },
-  login_failed:     { label: "Login failed",       icon: ShieldAlert,      colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `Failed login attempt${l.meta?.email ? ` for ${l.meta.email}` : ""}` },
-  contact_create:   { label: "Contact created",    icon: Contact,          colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} created contact ${l.entityLabel ?? ""}` },
-  contact_update:   { label: "Contact updated",    icon: Contact,          colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated ${l.entityLabel ?? "a contact"}${fmtFields(l.meta?.fields)}` },
-  contact_delete:   { label: "Contact deleted",    icon: Contact,          colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted contact ${l.entityLabel ?? ""}` },
-  account_create:   { label: "Account created",    icon: Building2,        colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} created account ${l.entityLabel ?? ""}` },
-  account_update:   { label: "Account updated",    icon: Building2,        colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated ${l.entityLabel ?? "an account"}${fmtFields(l.meta?.fields)}` },
-  account_delete:   { label: "Account deleted",    icon: Building2,        colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted account ${l.entityLabel ?? ""}` },
-  prospect_create:  { label: "Prospect created",   icon: UserPlus,         colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} added prospect ${l.entityLabel ?? ""}` },
-  prospect_update:  { label: "Prospect updated",   icon: UserCog,          colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated ${l.entityLabel ?? "a prospect"}${fmtFields(l.meta?.fields)}` },
-  prospect_delete:  { label: "Prospect deleted",   icon: UserX,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted prospect ${l.entityLabel ?? ""}` },
-  prospect_import:  { label: "Prospects imported", icon: FileUp,           colour: "text-violet-600 bg-violet-50 border-violet-200",     describe: (l) => `${l.userName ?? "Someone"} imported ${l.meta?.inserted ?? "?"} prospect${Number(l.meta?.inserted) !== 1 ? "s" : ""}${l.meta?.skipped ? `, ${l.meta.skipped} skipped` : ""}` },
-  prospect_convert: { label: "Prospect converted", icon: ArrowRightCircle, colour: "text-emerald-600 bg-emerald-50 border-emerald-200",  describe: (l) => `${l.userName ?? "Someone"} converted ${l.entityLabel ?? "a prospect"} to contact${l.meta?.accountId ? " + account" : ""}` },
-  deal_create:      { label: "Deal created",       icon: Handshake,        colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} created deal "${l.entityLabel ?? ""}"` },
-  deal_update:      { label: "Deal updated",       icon: Handshake,        colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated deal "${l.entityLabel ?? ""}${fmtFields(l.meta?.fields)}"` },
-  deal_delete:      { label: "Deal deleted",       icon: Handshake,        colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted deal "${l.entityLabel ?? ""}"` },
-  deal_stage_change:{ label: "Stage changed",      icon: RefreshCw,        colour: "text-violet-600 bg-violet-50 border-violet-200",     describe: (l) => `${l.userName ?? "Someone"} moved "${l.entityLabel ?? "a deal"}" to ${l.meta?.stage ?? "new stage"}` },
-  task_create:      { label: "Task created",       icon: CheckSquare,      colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} created task "${l.entityLabel ?? ""}"` },
-  task_update:      { label: "Task updated",       icon: CheckSquare,      colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated task "${l.entityLabel ?? ""}${fmtFields(l.meta?.fields)}"` },
-  task_delete:      { label: "Task deleted",       icon: CheckSquare,      colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted task "${l.entityLabel ?? ""}"` },
-  call_create:      { label: "Call logged",        icon: Phone,            colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} logged call "${l.entityLabel ?? ""}"` },
-  call_update:      { label: "Call updated",       icon: Phone,            colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated call "${l.entityLabel ?? ""}"` },
-  call_delete:      { label: "Call deleted",       icon: Phone,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted call "${l.entityLabel ?? ""}"` },
-  meeting_create:   { label: "Meeting scheduled",  icon: Video,            colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} scheduled "${l.entityLabel ?? "a meeting"}"` },
-  meeting_update:   { label: "Meeting updated",    icon: Video,            colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated "${l.entityLabel ?? "a meeting"}"` },
-  meeting_delete:   { label: "Meeting deleted",    icon: Video,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted meeting "${l.entityLabel ?? ""}"` },
-  ticket_create:    { label: "Ticket opened",      icon: TicketIcon,       colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "Someone"} opened ticket "${l.entityLabel ?? ""}"` },
-  ticket_update:    { label: "Ticket updated",     icon: TicketIcon,       colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "Someone"} updated ticket "${l.entityLabel ?? ""}${fmtFields(l.meta?.fields)}"` },
-  ticket_delete:    { label: "Ticket deleted",     icon: TicketIcon,       colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "Someone"} deleted ticket "${l.entityLabel ?? ""}"` },
-  user_create:      { label: "User created",       icon: UserPlus,         colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l) => `${l.userName ?? "An admin"} created user ${l.entityLabel ?? ""}${l.meta?.role ? ` (${l.meta.role})` : ""}` },
-  user_update:      { label: "User updated",       icon: UserCog,          colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l) => `${l.userName ?? "An admin"} updated user ${l.entityLabel ?? ""}${fmtFields(l.meta?.fields)}` },
-  user_delete:      { label: "User deleted",       icon: UserX,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l) => `${l.userName ?? "An admin"} deleted user ${l.entityLabel ?? ""}` },
+  login:            { labelKey: "actions.login",              icon: LogIn,            colour: "text-emerald-600 bg-emerald-50 border-emerald-200",  describe: (l, t) => t("actions.login", { name: l.userName ?? l.userEmail ?? "Unknown" }) },
+  logout:           { labelKey: "actions.logout",             icon: LogOut,           colour: "text-zinc-500 bg-zinc-100 border-zinc-200",          describe: (l, t) => t("actions.logout", { name: l.userName ?? l.userEmail ?? "Unknown" }) },
+  register:         { labelKey: "actions.register",           icon: UserPlus,         colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => t("actions.register", { email: l.entityLabel ?? l.userEmail ?? "unknown" }) },
+  login_failed:     { labelKey: "actions.loginFailed",       icon: ShieldAlert,      colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => t("actions.loginFailed", { email: l.meta?.email ? ` for ${l.meta.email}` : "" }) },
+  contact_create:   { labelKey: "actions.contactCreate",    icon: Contact,          colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => t("actions.contactCreate", { label: l.entityLabel ?? "" }) },
+  contact_update:   { labelKey: "actions.contactUpdate",    icon: Contact,          colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => t("actions.contactUpdate", { label: l.entityLabel ?? "a contact" }) + fmtFields(l.meta?.fields) },
+  contact_delete:   { labelKey: "actions.contactDelete",    icon: Contact,          colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => t("actions.contactDelete", { label: l.entityLabel ?? "" }) },
+  account_create:   { labelKey: "actions.accountCreate",    icon: Building2,        colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => t("actions.accountCreate", { label: l.entityLabel ?? "" }) },
+  account_update:   { labelKey: "actions.accountUpdate",    icon: Building2,        colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => t("actions.accountUpdate", { label: l.entityLabel ?? "an account" }) + fmtFields(l.meta?.fields) },
+  account_delete:   { labelKey: "actions.accountDelete",    icon: Building2,        colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => t("actions.accountDelete", { label: l.entityLabel ?? "" }) },
+  prospect_create:  { labelKey: "actions.prospectCreate",   icon: UserPlus,         colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => t("actions.prospectCreate", { label: l.entityLabel ?? "" }) },
+  prospect_update:  { labelKey: "actions.prospectUpdate",   icon: UserCog,          colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => t("actions.prospectUpdate", { label: l.entityLabel ?? "a prospect" }) + fmtFields(l.meta?.fields) },
+  prospect_delete:  { labelKey: "actions.prospectDelete",   icon: UserX,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => t("actions.prospectDelete", { label: l.entityLabel ?? "" }) },
+  prospect_import:  { labelKey: "actions.prospectImport",   icon: FileUp,           colour: "text-violet-600 bg-violet-50 border-violet-200",     describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.prospectImport", { count: l.meta?.inserted ?? "?", skipped: l.meta?.skipped ? `, ${l.meta.skipped} skipped` : "" })}` },
+  prospect_convert: { labelKey: "actions.prospectConvert",  icon: ArrowRightCircle, colour: "text-emerald-600 bg-emerald-50 border-emerald-200",  describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.prospectConvert", { label: l.entityLabel ?? "a prospect", account: l.meta?.accountId ? " + account" : "" })}` },
+  deal_create:      { labelKey: "actions.dealCreate",       icon: Handshake,        colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.dealCreate", { label: l.entityLabel ?? "" })}` },
+  deal_update:      { labelKey: "actions.dealUpdate",       icon: Handshake,        colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.dealUpdate", { label: l.entityLabel ?? "" })}${fmtFields(l.meta?.fields)}` },
+  deal_delete:      { labelKey: "actions.dealDelete",       icon: Handshake,        colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.dealDelete", { label: l.entityLabel ?? "" })}` },
+  deal_stage_change:{ labelKey: "actions.dealStageChange",  icon: RefreshCw,        colour: "text-violet-600 bg-violet-50 border-violet-200",     describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.dealStageChange", { label: l.entityLabel ?? "a deal", stage: l.meta?.stage ?? "new stage" })}` },
+  task_create:      { labelKey: "actions.taskCreate",       icon: CheckSquare,      colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.taskCreate", { label: l.entityLabel ?? "" })}` },
+  task_update:      { labelKey: "actions.taskUpdate",       icon: CheckSquare,      colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.taskUpdate", { label: l.entityLabel ?? "" })}${fmtFields(l.meta?.fields)}` },
+  task_delete:      { labelKey: "actions.taskDelete",       icon: CheckSquare,      colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.taskDelete", { label: l.entityLabel ?? "" })}` },
+  call_create:      { labelKey: "actions.callCreate",       icon: Phone,            colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.callCreate", { label: l.entityLabel ?? "" })}` },
+  call_update:      { labelKey: "actions.callUpdate",       icon: Phone,            colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.callUpdate", { label: l.entityLabel ?? "" })}` },
+  call_delete:      { labelKey: "actions.callDelete",       icon: Phone,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.callDelete", { label: l.entityLabel ?? "" })}` },
+  meeting_create:   { labelKey: "actions.meetingCreate",    icon: Video,            colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.meetingCreate", { label: l.entityLabel ?? "a meeting" })}` },
+  meeting_update:   { labelKey: "actions.meetingUpdate",    icon: Video,            colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.meetingUpdate", { label: l.entityLabel ?? "a meeting" })}` },
+  meeting_delete:   { labelKey: "actions.meetingDelete",    icon: Video,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.meetingDelete", { label: l.entityLabel ?? "" })}` },
+  ticket_create:    { labelKey: "actions.ticketCreate",     icon: TicketIcon,       colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.ticketCreate", { label: l.entityLabel ?? "" })}` },
+  ticket_update:    { labelKey: "actions.ticketUpdate",     icon: TicketIcon,       colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.ticketUpdate", { label: l.entityLabel ?? "" })}${fmtFields(l.meta?.fields)}` },
+  ticket_delete:    { labelKey: "actions.ticketDelete",     icon: TicketIcon,       colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.ticketDelete", { label: l.entityLabel ?? "" })}` },
+  user_create:      { labelKey: "actions.userCreate",       icon: UserPlus,         colour: "text-blue-600 bg-blue-50 border-blue-200",           describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.userCreate", { label: l.entityLabel ?? "" })}${l.meta?.role ? ` (${l.meta.role})` : ""}` },
+  user_update:      { labelKey: "actions.userUpdate",       icon: UserCog,          colour: "text-amber-600 bg-amber-50 border-amber-200",        describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.userUpdate", { label: l.entityLabel ?? "" })}${fmtFields(l.meta?.fields)}` },
+  user_delete:      { labelKey: "actions.userDelete",       icon: UserX,            colour: "text-red-600 bg-red-50 border-red-200",              describe: (l, t) => `${l.userName ?? t("common.someone")} ${t("actions.userDelete", { label: l.entityLabel ?? "" })}` },
 };
 
 const ACTION_GROUPS = [
-  { label: "Auth",      values: ["login","logout","register","login_failed"] },
-  { label: "Contacts",  values: ["contact_create","contact_update","contact_delete"] },
-  { label: "Accounts",  values: ["account_create","account_update","account_delete"] },
-  { label: "Prospects", values: ["prospect_create","prospect_update","prospect_delete","prospect_import","prospect_convert"] },
-  { label: "Deals",     values: ["deal_create","deal_update","deal_delete","deal_stage_change"] },
-  { label: "Tasks",     values: ["task_create","task_update","task_delete"] },
-  { label: "Calls",     values: ["call_create","call_update","call_delete"] },
-  { label: "Meetings",  values: ["meeting_create","meeting_update","meeting_delete"] },
-  { label: "Tickets",   values: ["ticket_create","ticket_update","ticket_delete"] },
-  { label: "Users",     values: ["user_create","user_update","user_delete"] },
+  { label: "activityLog.groupAuth",      values: ["login","logout","register","login_failed"] },
+  { label: "activityLog.groupContacts",  values: ["contact_create","contact_update","contact_delete"] },
+  { label: "activityLog.groupAccounts",  values: ["account_create","account_update","account_delete"] },
+  { label: "activityLog.groupProspects", values: ["prospect_create","prospect_update","prospect_delete","prospect_import","prospect_convert"] },
+  { label: "activityLog.groupDeals",     values: ["deal_create","deal_update","deal_delete","deal_stage_change"] },
+  { label: "activityLog.groupTasks",     values: ["task_create","task_update","task_delete"] },
+  { label: "activityLog.groupCalls",     values: ["call_create","call_update","call_delete"] },
+  { label: "activityLog.groupMeetings",  values: ["meeting_create","meeting_update","meeting_delete"] },
+  { label: "activityLog.groupTickets",   values: ["ticket_create","ticket_update","ticket_delete"] },
+  { label: "activityLog.groupUsers",     values: ["user_create","user_update","user_delete"] },
 ];
 
 const ENTITY_OPTIONS = ["contact","account","prospect","deal","task","call","meeting","ticket","user"];
 
-// ── Smart search parser ───────────────────────────────────────────────────────
-
-// Maps typed keywords → action filter values
 const KEYWORD_ACTION: Record<string, string> = {
   login: "login", "signed in": "login", "logged in": "login",
   logout: "logout", "signed out": "logout", "logged out": "logout",
@@ -82,7 +78,6 @@ const KEYWORD_ACTION: Record<string, string> = {
   converted: "prospect_convert", convert: "prospect_convert",
 };
 
-// Maps typed keywords → entity filter values
 const KEYWORD_ENTITY: Record<string, string> = {
   contact: "contact", contacts: "contact",
   account: "account", accounts: "account",
@@ -95,14 +90,12 @@ const KEYWORD_ENTITY: Record<string, string> = {
   user: "user", users: "user",
 };
 
-// Maps typed verbs → action suffix (combined with entity below)
 const KEYWORD_VERB: Record<string, string> = {
   created: "create", added: "create", new: "create",
   updated: "update", edited: "update", changed: "update",
   deleted: "delete", removed: "delete",
 };
 
-// ISO date helpers
 function todayRange(): { dateFrom: string; dateTo: string } {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -133,7 +126,7 @@ function thisWeekRange(): { dateFrom: string; dateTo: string } {
 }
 
 interface ParsedQuery {
-  text: string;           // remaining text to pass as freetext search
+  text: string;
   action: string;
   entity: string;
   dateFrom: string;
@@ -145,7 +138,6 @@ function parseQuery(raw: string, users: AdminUser[]): ParsedQuery {
   const result: ParsedQuery = { text: "", action: "", entity: "", dateFrom: "", dateTo: "", chips: [] };
   let remaining = raw.toLowerCase().trim();
 
-  // ── Date keywords ──
   if (/\btoday\b/.test(remaining)) {
     const r = todayRange();
     result.dateFrom = r.dateFrom; result.dateTo = r.dateTo;
@@ -163,24 +155,20 @@ function parseQuery(raw: string, users: AdminUser[]): ParsedQuery {
     remaining = remaining.replace(/\bthis\s*week\b/, "").trim();
   }
 
-  // ── IP address ──
   const ipMatch = remaining.match(/\b(?:ip[:\s]?)?((?:\d{1,3}\.){3}\d{1,3})\b/);
   if (ipMatch) {
     result.chips.push({ key: "ip", label: `IP: ${ipMatch[1]}` });
-    // Leave in text for backend to match
   }
 
-  // ── Multi-word action keywords (check before splitting) ──
   for (const [kw, action] of Object.entries(KEYWORD_ACTION)) {
     if (remaining.includes(kw) && !result.action) {
       result.action = action;
-      result.chips.push({ key: "action", label: ACTION_META[action]?.label ?? action });
+      result.chips.push({ key: "action", label: ACTION_META[action]?.labelKey ?? action });
       remaining = remaining.replace(kw, "").trim();
       break;
     }
   }
 
-  // ── Entity + verb combos (e.g. "deleted deal", "sophie deal") ──
   const tokens = remaining.split(/\s+/).filter(Boolean);
   const remaining2: string[] = [];
 
@@ -190,24 +178,20 @@ function parseQuery(raw: string, users: AdminUser[]): ParsedQuery {
       result.chips.push({ key: "entity", label: result.entity.charAt(0).toUpperCase() + result.entity.slice(1) });
     } else if (!result.action && KEYWORD_VERB[token] && result.entity) {
       result.action = `${result.entity}_${KEYWORD_VERB[token]}`;
-      // Replace just the entity chip label now that we have action
       const existingEntityChip = result.chips.find((c) => c.key === "entity");
       if (existingEntityChip) {
         result.chips = result.chips.filter((c) => c.key !== "entity");
-        result.chips.push({ key: "action", label: ACTION_META[result.action]?.label ?? result.action });
-        result.entity = ""; // action is more specific
+        result.chips.push({ key: "action", label: ACTION_META[result.action]?.labelKey ?? result.action });
+        result.entity = "";
       }
     } else if (!result.action && KEYWORD_VERB[token]) {
-      // Verb without entity — keep as text
       remaining2.push(token);
     } else {
-      // Check if it matches a user name
       const matchedUser = users.find((u) =>
         u.name.toLowerCase().includes(token) || u.email.toLowerCase().includes(token)
       );
       if (matchedUser) {
         result.chips.push({ key: "userName", label: matchedUser.name });
-        // Pass the name as freetext so backend searches userName
       } else {
         remaining2.push(token);
       }
@@ -217,8 +201,6 @@ function parseQuery(raw: string, users: AdminUser[]): ParsedQuery {
   result.text = remaining2.join(" ").trim();
   return result;
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtFields(fields: unknown): string {
   if (!Array.isArray(fields) || !fields.length) return "";
@@ -255,13 +237,12 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-// ── Log row ───────────────────────────────────────────────────────────────────
-
 function LogRow({ log }: { log: ActivityLogEntry }) {
+  const { t } = useLanguage();
   const meta        = ACTION_META[log.action];
   const Icon        = meta?.icon ?? Activity;
   const colour      = meta?.colour ?? "text-zinc-400 bg-zinc-100 border-zinc-200";
-  const description = meta?.describe(log) ?? log.action;
+  const description = meta?.describe(log, t) ?? log.action;
 
   return (
     <div className="flex items-start gap-4 px-5 py-3.5 hover:bg-zinc-50/80 transition-colors border-b border-zinc-50 last:border-0">
@@ -284,7 +265,7 @@ function LogRow({ log }: { log: ActivityLogEntry }) {
           )}
           <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${colour}`}>
             <Icon className="w-2.5 h-2.5" strokeWidth={2} />
-            {meta?.label ?? log.action}
+            {meta?.labelKey ?? log.action}
           </span>
         </div>
       </div>
@@ -299,8 +280,6 @@ function LogRow({ log }: { log: ActivityLogEntry }) {
     </div>
   );
 }
-
-// ── Smart search input ────────────────────────────────────────────────────────
 
 interface SmartSearchProps {
   value: string;
@@ -318,7 +297,7 @@ function SmartSearchInput({ value, onChange, chips, onRemoveChip, placeholder }:
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => onChange(local), 350);
     return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [local]); // eslint-disable-line
+  }, [local]);
 
   useEffect(() => { setLocal(value); }, [value]);
 
@@ -341,7 +320,6 @@ function SmartSearchInput({ value, onChange, chips, onRemoveChip, placeholder }:
           </button>
         )}
       </div>
-      {/* Active filter chips */}
       {chips.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {chips.map((chip) => (
@@ -355,7 +333,7 @@ function SmartSearchInput({ value, onChange, chips, onRemoveChip, placeholder }:
           ))}
           <button onClick={() => { setLocal(""); onChange(""); onRemoveChip("all"); }}
             className="text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors px-1">
-            Clear all
+            {t("activityLog.clearAll")}
           </button>
         </div>
       )}
@@ -363,10 +341,9 @@ function SmartSearchInput({ value, onChange, chips, onRemoveChip, placeholder }:
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function ActivityLogPage() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [logs, setLogs]     = useState<ActivityLogEntry[]>([]);
   const [total, setTotal]   = useState(0);
   const [page, setPage]     = useState(1);
@@ -374,10 +351,7 @@ export default function ActivityLogPage() {
   const [error, setError]   = useState("");
   const [users, setUsers]   = useState<AdminUser[]>([]);
 
-  // Raw search string typed by the user
   const [rawSearch, setRawSearch] = useState("");
-
-  // Parsed/resolved filters — updated whenever rawSearch or manual filters change
   const [smartText,   setSmartText]   = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [entityFilter, setEntityFilter] = useState("");
@@ -391,7 +365,6 @@ export default function ActivityLogPage() {
     listUsers(token).then(setUsers).catch(() => {});
   }, [token]);
 
-  // Re-parse whenever the raw search changes
   useEffect(() => {
     if (!rawSearch.trim()) {
       setSmartText(""); setChips([]);
@@ -406,7 +379,6 @@ export default function ActivityLogPage() {
     if (parsed.entity)   setEntityFilter(parsed.entity);
     if (parsed.dateFrom) setDateFrom(parsed.dateFrom);
     if (parsed.dateTo)   setDateTo(parsed.dateTo);
-    // If no entity/action detected from query, don't override manual selects
   }, [rawSearch, users]);
 
   useEffect(() => { setPage(1); }, [smartText, actionFilter, entityFilter, userFilter, dateFrom, dateTo]);
@@ -447,41 +419,38 @@ export default function ActivityLogPage() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Activity Log</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">{total.toLocaleString()} event{total !== 1 ? "s" : ""}</p>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.activityLog.title")}</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">{total.toLocaleString()} {t("pages.activityLog.countLabel")}</p>
         </div>
         <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center">
           <Activity className="w-4 h-4 text-zinc-500" strokeWidth={1.75} />
         </div>
       </div>
 
-      {/* Smart search + hint */}
       <div className="space-y-1.5">
         <SmartSearchInput
           value={rawSearch}
           onChange={setRawSearch}
           chips={chips}
           onRemoveChip={handleRemoveChip}
-          placeholder='Search… try "sophie deleted deal" or "login failed today"'
+          placeholder={t("pages.activityLog.searchPlaceholder")}
         />
         <p className="text-[11px] text-zinc-400 px-1">
-          Understands: names, entities (deal, contact…), actions (deleted, created…), dates (today, yesterday, this week), IP addresses
+          {t("activityLog.hint")}
         </p>
       </div>
 
-      {/* Manual filter dropdowns */}
       <div className="flex flex-wrap gap-3">
         <div className="relative">
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" strokeWidth={1.75} />
           <select value={actionFilter} onChange={(e) => { setActionFilter(e.target.value); setChips((p) => p.filter((c) => c.key !== "action")); }}
             className="appearance-none pl-3 pr-9 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-            <option value="">All actions</option>
+            <option value="">{t("activityLog.allActions")}</option>
             {ACTION_GROUPS.map((g) => (
-              <optgroup key={g.label} label={g.label}>
-                {g.values.map((v) => <option key={v} value={v}>{ACTION_META[v]?.label ?? v}</option>)}
+              <optgroup key={g.label} label={t(g.label)}>
+                {g.values.map((v) => <option key={v} value={v}>{t(ACTION_META[v]?.labelKey ?? v)}</option>)}
               </optgroup>
             ))}
           </select>
@@ -490,7 +459,7 @@ export default function ActivityLogPage() {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" strokeWidth={1.75} />
           <select value={entityFilter} onChange={(e) => { setEntityFilter(e.target.value); setChips((p) => p.filter((c) => c.key !== "entity")); }}
             className="appearance-none pl-3 pr-9 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-            <option value="">All entities</option>
+            <option value="">{t("activityLog.allEntities")}</option>
             {ENTITY_OPTIONS.map((e) => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
           </select>
         </div>
@@ -498,7 +467,7 @@ export default function ActivityLogPage() {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" strokeWidth={1.75} />
           <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)}
             className="appearance-none pl-3 pr-9 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-            <option value="">All users</option>
+            <option value="">{t("activityLog.allUsers")}</option>
             {users.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
           </select>
         </div>
@@ -517,7 +486,6 @@ export default function ActivityLogPage() {
 
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
-      {/* Feed */}
       <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -526,8 +494,8 @@ export default function ActivityLogPage() {
         ) : logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Activity className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">No activity found.</p>
-            {rawSearch && <p className="text-xs text-zinc-400">Try: <code className="bg-zinc-100 px-1 rounded">login today</code>, <code className="bg-zinc-100 px-1 rounded">sophie deleted</code>, <code className="bg-zinc-100 px-1 rounded">deals this week</code></p>}
+            <p className="text-sm text-zinc-400">{t("activityLog.noResults")}</p>
+            {rawSearch && <p className="text-xs text-zinc-400">{t("activityLog.tryThese")}: <code className="bg-zinc-100 px-1 rounded">login today</code>, <code className="bg-zinc-100 px-1 rounded">sophie deleted</code>, <code className="bg-zinc-100 px-1 rounded">deals this week</code></p>}
           </div>
         ) : (
           <div>{logs.map((log) => <LogRow key={log._id} log={log} />)}</div>

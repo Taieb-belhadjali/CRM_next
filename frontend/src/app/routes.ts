@@ -20,6 +20,8 @@ import Invoices from "./pages/Invoices";
 import Orders from "./pages/Orders";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import Deliveries from "./pages/Deliveries";
+import SearchPage from "./pages/Search";
+import SettingsPage from "./pages/Settings";
 import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
 
 function makeStub(title: string, description: string) {
@@ -65,8 +67,8 @@ export const router = createBrowserRouter([
           { path: "purchase-orders", Component: PurchaseOrders },
           { path: "deliveries", Component: Deliveries },
 
-          { path: "search",   Component: makeStub("Search",   "Global search coming soon.") },
-          { path: "settings", Component: makeStub("Settings", "Workspace settings coming soon.") },
+          { path: "search",   Component: SearchPage },
+          { path: "settings", Component: SettingsPage },
 
           // Admin-only
           {

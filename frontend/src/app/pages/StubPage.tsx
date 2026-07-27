@@ -1,6 +1,9 @@
 import { Construction } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function StubPage({ title, description }: { title: string; description: string }) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-96 text-center">
       <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center mb-4">

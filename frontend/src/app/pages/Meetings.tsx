@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Video, Users, Link, CalendarDays } from "lucide-react";
 import { listMeetings, createMeeting, updateMeeting, deleteMeeting, listUsers, type Meeting, type MeetingPayload, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -11,6 +12,7 @@ import { FormField, inputCls, selectCls } from "../components/shared/FormField";
 const LIMIT = 25;
 
 function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Meeting | null; users: AdminUser[]; onSave: (m: Meeting) => void; onCancel: () => void; token: string }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<MeetingPayload>({
     title:           initial?.title ?? "",
     scheduledAt:     initial?.scheduledAt ? initial.scheduledAt.slice(0, 16) : "",
@@ -37,7 +39,7 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title?.trim() || !form.scheduledAt) { setError("Title and date are required."); return; }
+    if (!form.title?.trim() || !form.scheduledAt) { setError(t("errors.titleRequired")); return; }
     setError(""); setLoading(true);
     try {
       const payload = { ...form, durationMinutes: Number(form.durationMinutes) || 60 };
@@ -49,25 +51,25 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Title" required>
+      <FormField label={t("forms.title")} required>
         <input className={inputCls} value={form.title} onChange={set("title")} placeholder="Product demo — Acme Corp" />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Date & time" required>
+        <FormField label={t("forms.scheduledAt")} required>
           <input className={inputCls} type="datetime-local" value={form.scheduledAt} onChange={set("scheduledAt")} />
         </FormField>
-        <FormField label="Duration (min)">
+        <FormField label={t("forms.duration")}>
           <input className={inputCls} type="number" min={5} step={5} value={form.durationMinutes ?? 60}
             onChange={(e) => setForm((p) => ({ ...p, durationMinutes: Number(e.target.value) }))} />
         </FormField>
       </div>
-      <FormField label="Location">
+      <FormField label={t("forms.location")}>
         <input className={inputCls} value={form.location ?? ""} onChange={set("location")} placeholder="Conference room B / Paris" />
       </FormField>
       <FormField label="Meeting link">
         <input className={inputCls} type="url" value={form.meetingLink ?? ""} onChange={set("meetingLink")} placeholder="https://meet.google.com/…" />
       </FormField>
-      <FormField label="Notes">
+      <FormField label={t("forms.notes")}>
         <textarea className={inputCls} rows={3} value={form.notes ?? ""} onChange={set("notes")} placeholder="Agenda, objectives…" />
       </FormField>
       <div>
@@ -85,9 +87,9 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
       </div>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Schedule meeting"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("pages.meetings.newMeeting")}
         </button>
       </div>
     </form>
@@ -95,6 +97,7 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
 }
 
 function MeetingDetail({ meeting, onEdit, onDelete }: { meeting: Meeting; onEdit: () => void; onDelete: () => void }) {
+  const { t } = useLanguage();
   const participants = (meeting.participants ?? []) as { name: string; email: string }[];
   return (
     <div className="space-y-4">
@@ -103,8 +106,8 @@ function MeetingDetail({ meeting, onEdit, onDelete }: { meeting: Meeting; onEdit
         <p className="text-xs text-zinc-500 mt-1">{new Date(meeting.scheduledAt).toLocaleString()} · {meeting.durationMinutes} min</p>
       </div>
       <div>
-        <DetailRow label="Location" value={meeting.location} />
-        <DetailRow label="Notes" value={meeting.notes} />
+        <DetailRow label={t("forms.location")} value={meeting.location} />
+        <DetailRow label={t("forms.notes")} value={meeting.notes} />
         {meeting.meetingLink && (
           <div className="flex flex-col gap-0.5 py-3 border-b border-zinc-100 last:border-0">
             <span className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Meeting link</span>
@@ -135,10 +138,10 @@ function MeetingDetail({ meeting, onEdit, onDelete }: { meeting: Meeting; onEdit
       )}
       <div className="flex gap-2 pt-2">
         <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> Edit
+          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.edit")}
         </button>
         <button onClick={onDelete} className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Delete
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.delete")}
         </button>
       </div>
     </div>
@@ -147,6 +150,7 @@ function MeetingDetail({ meeting, onEdit, onDelete }: { meeting: Meeting; onEdit
 
 export default function Meetings() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [total, setTotal]       = useState(0);
   const [page, setPage]         = useState(1);
@@ -194,7 +198,7 @@ export default function Meetings() {
       setTotal((n) => n - 1);
       if (selected?._id === deleting._id) setSelected(null);
       setDeleting(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("errors.deleteFailed")); }
     finally { setDeleteLoading(false); }
   };
 
@@ -202,11 +206,11 @@ export default function Meetings() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Meetings</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.meetings.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} meeting{total !== 1 ? "s" : ""}</p>
         </div>
         <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> Schedule meeting
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.meetings.newMeeting")}
         </button>
       </div>
 
@@ -218,7 +222,7 @@ export default function Meetings() {
         ) : meetings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Video className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">No meetings scheduled yet.</p>
+            <p className="text-sm text-zinc-400">{t("pages.meetings.noMeetings")}</p>
           </div>
         ) : (
           <div className="divide-y divide-zinc-50">
@@ -258,7 +262,7 @@ export default function Meetings() {
         {selected && <MeetingDetail meeting={selected} onEdit={() => setEditing(selected)} onDelete={() => { setDeleting(selected); setSelected(null); }} />}
       </SlideOver>
 
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "Schedule meeting" : "Edit meeting"}>
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.meetings.newMeeting") : t("forms.edit")}>
         {editing !== null && <MeetingForm initial={editing === "new" ? null : editing} users={users} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />}
       </SlideOver>
 

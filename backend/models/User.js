@@ -27,6 +27,16 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    timezone: {
+      type: String,
+      trim: true,
+      default: "UTC",
+    },
+    language: {
+      type: String,
+      trim: true,
+      default: "en",
+    },
   },
   { timestamps: true }
 );

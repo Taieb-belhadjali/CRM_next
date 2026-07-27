@@ -11,6 +11,7 @@ import {
   type Account,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -45,6 +46,7 @@ interface FormProps {
 }
 
 function ContactForm({ initial, accounts, onSave, onCancel, token }: FormProps) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<ContactPayload>({
     firstName: initial?.firstName ?? "",
     lastName: initial?.lastName ?? "",
@@ -84,26 +86,26 @@ function ContactForm({ initial, accounts, onSave, onCancel, token }: FormProps) 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="First name" required>
+        <FormField label={t("forms.firstName")} required>
           <input className={inputCls} value={form.firstName} onChange={set("firstName")} placeholder="Sophie" />
         </FormField>
-        <FormField label="Last name" required>
+        <FormField label={t("forms.lastName")} required>
           <input className={inputCls} value={form.lastName} onChange={set("lastName")} placeholder="Martin" />
         </FormField>
       </div>
-      <FormField label="Job title">
+      <FormField label={t("forms.jobTitle")}>
         <input className={inputCls} value={form.jobTitle} onChange={set("jobTitle")} placeholder="Sales Manager" />
       </FormField>
-      <FormField label="Email">
+      <FormField label={t("forms.email")}>
         <input className={inputCls} type="email" value={form.email} onChange={set("email")} placeholder="sophie@acme.com" />
       </FormField>
-      <FormField label="Phone">
+      <FormField label={t("forms.phone")}>
         <input className={inputCls} value={form.phone} onChange={set("phone")} placeholder="+33 6 00 00 00 00" />
       </FormField>
-      <FormField label="Address">
+      <FormField label={t("forms.address")}>
         <input className={inputCls} value={form.address} onChange={set("address")} placeholder="12 Rue de la Paix, Paris" />
       </FormField>
-      <FormField label="Account">
+      <FormField label={t("forms.account")}>
         <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
           <option value="">— No account —</option>
           {accounts.map((a) => (
@@ -114,10 +116,10 @@ function ContactForm({ initial, accounts, onSave, onCancel, token }: FormProps) 
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          Cancel
+          {t("common.cancel")}
         </button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Create contact"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("pages.contacts.newContact")}
         </button>
       </div>
     </form>
@@ -127,6 +129,7 @@ function ContactForm({ initial, accounts, onSave, onCancel, token }: FormProps) 
 // ── Detail panel ──────────────────────────────────────────────────────────────
 
 function ContactDetail({ contact, onEdit, onDelete }: { contact: Contact; onEdit: () => void; onDelete: () => void }) {
+  const { t } = useLanguage();
   const accountName = contact.account
     ? (contact.account as { name: string }).name
     : null;
@@ -144,20 +147,20 @@ function ContactDetail({ contact, onEdit, onDelete }: { contact: Contact; onEdit
       </div>
 
       <div>
-        <DetailRow label="Email" value={contact.email} />
-        <DetailRow label="Phone" value={contact.phone} />
-        <DetailRow label="Address" value={contact.address} />
-        <DetailRow label="Account" value={accountName} />
-        <DetailRow label="Owner" value={contact.owner?.name} />
+        <DetailRow label={t("forms.email")} value={contact.email} />
+        <DetailRow label={t("forms.phone")} value={contact.phone} />
+        <DetailRow label={t("forms.address")} value={contact.address} />
+        <DetailRow label={t("forms.account")} value={accountName} />
+        <DetailRow label={t("forms.owner")} value={contact.owner?.name} />
         <DetailRow label="Added" value={new Date(contact.createdAt).toLocaleDateString()} />
       </div>
 
       <div className="flex gap-2 pt-2">
         <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
-          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> Edit
+          <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.edit")}
         </button>
         <button onClick={onDelete} className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Delete
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.delete")}
         </button>
       </div>
     </div>
@@ -168,6 +171,7 @@ function ContactDetail({ contact, onEdit, onDelete }: { contact: Contact; onEdit
 
 export default function Contacts() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -234,18 +238,18 @@ export default function Contacts() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Contacts</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.contacts.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} contact{total !== 1 ? "s" : ""}</p>
         </div>
         <button
           onClick={() => setEditing("new")}
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
         >
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> New contact
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.contacts.newContact")}
         </button>
       </div>
 
-      <SearchBar value={search} onChange={(v) => setSearch(v)} placeholder="Search contacts…" />
+      <SearchBar value={search} onChange={(v) => setSearch(v)} placeholder={t("pages.contacts.searchPlaceholder")} />
 
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
@@ -264,10 +268,10 @@ export default function Contacts() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Name</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">Email</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Phone</th>
-                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">Account</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium">{t("forms.name")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden md:table-cell">{t("forms.email")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.phone")}</th>
+                <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-zinc-400 font-medium hidden lg:table-cell">{t("forms.account")}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -356,7 +360,7 @@ export default function Contacts() {
       <SlideOver
         open={!!editing}
         onClose={() => setEditing(null)}
-        title={editing === "new" ? "New contact" : "Edit contact"}
+        title={editing === "new" ? t("pages.contacts.newContact") : `${t("common.edit")} ${t("forms.contact")}`}
       >
         {editing !== null && (
           <ContactForm

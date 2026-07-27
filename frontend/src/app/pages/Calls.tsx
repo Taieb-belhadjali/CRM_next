@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed } from "lucide-react";
 import { listCalls, createCall, updateCall, deleteCall, type Call, type CallPayload, type CallStatus, type CallDirection } from "../api";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
 import { ConfirmDelete } from "../components/shared/ConfirmDelete";
 import { Pagination } from "../components/shared/Pagination";
@@ -33,6 +34,7 @@ function StatusBadge({ status }: { status: CallStatus }) {
 // ── Form ──────────────────────────────────────────────────────────────────────
 
 function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null; onSave: (c: Call) => void; onCancel: () => void; token: string }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<CallPayload>({
     subject:         initial?.subject         ?? "",
     direction:       initial?.direction       ?? "outbound",
@@ -50,7 +52,7 @@ function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.subject?.trim()) { setError("Subject is required."); return; }
+    if (!form.subject?.trim()) { setError(t("errors.titleRequired")); return; }
     setError(""); setLoading(true);
     try {
       const payload = { ...form, durationMinutes: Number(form.durationMinutes) || 0, scheduledAt: form.scheduledAt || null };
@@ -62,7 +64,7 @@ function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Subject" required>
+      <FormField label={t("forms.subject")} required>
         <input className={inputCls} value={form.subject} onChange={set("subject")} placeholder="Call with Acme Corp" />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
@@ -72,7 +74,7 @@ function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null;
             <option value="inbound">Inbound</option>
           </select>
         </FormField>
-        <FormField label="Status">
+        <FormField label={t("forms.status")}>
           <select className={selectCls} value={form.status} onChange={set("status")}>
             {(["scheduled","completed","missed","cancelled"] as CallStatus[]).map((s) =>
               <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
@@ -80,32 +82,33 @@ function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null;
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Duration (min)">
+        <FormField label={t("forms.duration")}>
           <input className={inputCls} type="number" min={0} value={form.durationMinutes ?? 0}
             onChange={(e) => setForm((p) => ({ ...p, durationMinutes: Number(e.target.value) }))} />
         </FormField>
-        <FormField label="Date & time">
+        <FormField label={t("forms.scheduledAt")}>
           <input className={inputCls} type="datetime-local" value={form.scheduledAt ?? ""} onChange={set("scheduledAt")} />
         </FormField>
       </div>
-      <FormField label="Notes">
+      <FormField label={t("forms.notes")}>
         <textarea className={inputCls} rows={3} value={form.notes ?? ""} onChange={set("notes")} placeholder="Call notes…" />
       </FormField>
       {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">{t("common.cancel")}</button>
         <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? "Save changes" : "Log call"}
+          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : initial ? t("common.save") : t("pages.calls.newCall")}
         </button>
       </div>
     </form>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────
 
 export default function Calls() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [calls, setCalls]     = useState<Call[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
@@ -155,16 +158,16 @@ export default function Calls() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900">Calls</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">{t("pages.calls.title")}</h1>
           <p className="text-sm text-zinc-500 mt-0.5">{total} call{total !== 1 ? "s" : ""}</p>
         </div>
         <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus className="w-4 h-4" strokeWidth={1.75} /> Log call
+          <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.calls.newCall")}
         </button>
       </div>
 
       <div className="flex gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder="Search calls…" /></div>
+        <div className="flex-1 min-w-[200px]"><SearchBar value={search} onChange={setSearch} placeholder={t("pages.calls.searchPlaceholder")} /></div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
           <option value="">All statuses</option>
           {(["scheduled","completed","missed","cancelled"] as CallStatus[]).map((s) =>
@@ -185,7 +188,7 @@ export default function Calls() {
         ) : calls.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Phone className="w-10 h-10 text-zinc-300" strokeWidth={1.25} />
-            <p className="text-sm text-zinc-400">No calls logged yet.</p>
+            <p className="text-sm text-zinc-400">{t("pages.calls.noCalls")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -228,7 +231,7 @@ export default function Calls() {
 
       <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
 
-      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? "Log call" : "Edit call"}>
+      <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.calls.newCall") : t("common.edit")}>
         {editing !== null && <CallForm initial={editing === "new" ? null : editing} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />}
       </SlideOver>
       {deleting && <ConfirmDelete name={deleting.subject} onConfirm={handleDelete} onCancel={() => setDeleting(null)} loading={deleteLoading} />}

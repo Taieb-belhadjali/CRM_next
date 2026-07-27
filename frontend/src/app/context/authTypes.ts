@@ -4,4 +4,6 @@ export interface AuthUser {
   email: string;
   role: "admin" | "commercial";
   isActive: boolean;
+  timezone?: string;
+  language?: string;
 }

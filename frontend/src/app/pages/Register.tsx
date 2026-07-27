@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { Zap, Eye, EyeOff, ArrowRight, Lock, Mail, User } from "lucide-react";
 import { registerApi } from "../api";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,15 +19,15 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !password || !confirmPassword) {
-      setError("All fields are required.");
+      setError(t("errors.allFieldsRequired"));
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("errors.passwordMinLength"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("errors.passwordsDontMatch"));
       return;
     }
     setError("");
@@ -64,17 +66,17 @@ export default function Register() {
         <div className="relative space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-white leading-snug">
-              Join your team.<br />Hit the ground running.
+              {t("register.tagline")}
             </h1>
             <p className="text-zinc-400 mt-3 text-sm leading-relaxed max-w-xs">
-              Create your account and get instant access to your team's pipeline, contacts, and activity feed.
+              {t("register.taglineSub")}
             </p>
           </div>
           <div className="space-y-3">
             {[
-              { stat: "2 min", label: "Average setup time" },
-              { stat: "100%", label: "Data synced on first login" },
-              { stat: "24/7", label: "Team collaboration" },
+              { stat: "2 min", label: t("register.stat1") },
+              { stat: "100%", label: t("register.stat2") },
+              { stat: "24/7", label: t("register.stat3") },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-3">
                 <div className="w-1 h-8 bg-blue-500 rounded-full" />
@@ -98,7 +100,7 @@ export default function Register() {
             </div>
             <div className="ml-auto">
               <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/20 rounded-full px-2 py-1 font-medium">
-                New
+                {t("register.newBadge")}
               </span>
             </div>
           </div>
@@ -117,32 +119,25 @@ export default function Register() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-zinc-900">Create account</h2>
-            <p className="text-zinc-500 text-sm mt-1.5">Fill in your details to get started.</p>
+            <h2 className="text-2xl font-bold text-zinc-900">{t("register.title")}</h2>
+            <p className="text-zinc-500 text-sm mt-1.5">{t("register.subtitle")}</p>
           </div>
 
           {success ? (
             <div className="text-center space-y-4 py-6">
-              <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-800">Account created!</p>
-                <p className="text-xs text-zinc-500 mt-1">Redirecting you to sign in…</p>
-              </div>
+              <div className="text-sm font-medium text-zinc-800">{t("register.successTitle")}</div>
+              <p className="text-xs text-zinc-500 mt-1">{t("register.redirecting")}</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-700 mb-1.5">Full name</label>
+                <label className="block text-xs font-medium text-zinc-700 mb-1.5">{t("forms.fullName")}</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
                   <input
                     type="text"
                     autoComplete="name"
-                    placeholder="Sophie Martin"
+                    placeholder={t("register.namePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
@@ -151,13 +146,13 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 mb-1.5">Email address</label>
+                <label className="block text-xs font-medium text-zinc-700 mb-1.5">{t("forms.email")}</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
                   <input
                     type="email"
                     autoComplete="email"
-                    placeholder="sophie@acmecorp.com"
+                    placeholder={t("register.emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
@@ -166,13 +161,13 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 mb-1.5">Password</label>
+                <label className="block text-xs font-medium text-zinc-700 mb-1.5">{t("forms.password")}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="Min. 8 characters"
+                    placeholder={t("register.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-9 pr-10 py-2.5 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
@@ -188,13 +183,13 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 mb-1.5">Confirm password</label>
+                <label className="block text-xs font-medium text-zinc-700 mb-1.5">{t("forms.confirmPassword")}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="Repeat your password"
+                    placeholder={t("register.confirmPasswordPlaceholder")}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
@@ -214,7 +209,7 @@ export default function Register() {
                 {loading ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <>Create account <ArrowRight className="w-4 h-4" /></>
+                  <>{t("register.createAccount")} <ArrowRight className="w-4 h-4" /></>
                 )}
               </button>
             </form>
@@ -222,9 +217,9 @@ export default function Register() {
 
           <div className="mt-6 pt-6 border-t border-zinc-200">
             <p className="text-xs text-zinc-400 text-center">
-              Already have an account?{" "}
+              {t("register.hasAccount")}{" "}
               <Link to="/login" className="text-blue-500 hover:text-blue-600 font-medium transition-colors">
-                Sign in
+                {t("login.signIn")}
               </Link>
             </p>
           </div>
