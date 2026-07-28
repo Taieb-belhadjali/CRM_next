@@ -146,6 +146,17 @@ export default function UserManagement() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const handleInvited = (u: AdminUser) => {
+    setUsers((prev) => [u, ...prev]);
+    if (u.role === "client" && u.password) {
+      setSuccessMessage(`Client user created. A welcome email was sent to ${u.email}. Password: ${u.password}`);
+    } else {
+      setSuccessMessage("User invited successfully.");
+    }
+    setTimeout(() => setSuccessMessage(""), 8000);
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -230,6 +241,7 @@ export default function UserManagement() {
       </div>
 
       {actionError && <ErrorBanner message={actionError} />}
+      {successMessage && <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">{successMessage}</p>}
 
       {loadingUsers ? (
         <div className="flex items-center justify-center py-20">
@@ -362,7 +374,7 @@ export default function UserManagement() {
           token={token}
           t={t}
           onClose={() => setShowInvite(false)}
-          onInvited={(u) => setUsers((prev) => [u, ...prev])}
+          onInvited={handleInvited}
         />
       )}
 
@@ -400,20 +412,34 @@ function InviteModal({ onClose, onInvited, token, t }: { onClose: () => void; on
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isClient = role === "client";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) {
+    if (!name || !email) {
+      setError(t("nameAndEmailRequired"));
+      return;
+    }
+    if (!isClient && !password) {
       setError(t("allFieldsRequired"));
       return;
     }
-    if (password.length < 8) {
+    if (!isClient && password.length < 8) {
       setError(t("passwordMinLength"));
       return;
     }
     setError("");
     setLoading(true);
     try {
-      await inviteUser(token, { name, email, password, role });
+      const payload: { name: string; email: string; password?: string; role: "commercial" | "admin" | "client" } = {
+        name,
+        email,
+        role,
+      };
+      if (!isClient) {
+        payload.password = password;
+      }
+      await inviteUser(token, payload);
       const users = await listUsers(token);
       const created = users.find((u) => u.email === email.toLowerCase());
       if (created) onInvited(created);
@@ -434,21 +460,26 @@ function InviteModal({ onClose, onInvited, token, t }: { onClose: () => void; on
         <Field label={t("emailAddress")}>
           <TextInput icon={Mail} type="email" placeholder="alex@acmecorp.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
-        <Field label={t("temporaryPassword")}>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder={t("passwordMinLength")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-9 pr-10 py-2.5 text-sm bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
-            />
-            <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors">
-              {showPassword ? <EyeOff className="w-4 h-4" strokeWidth={1.75} /> : <Eye className="w-4 h-4" strokeWidth={1.75} />}
-            </button>
-          </div>
-        </Field>
+        {!isClient && (
+          <Field label={t("temporaryPassword")}>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder={t("passwordMinLength")}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-9 pr-10 py-2.5 text-sm bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
+              />
+              <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors">
+                {showPassword ? <EyeOff className="w-4 h-4" strokeWidth={1.75} /> : <Eye className="w-4 h-4" strokeWidth={1.75} />}
+              </button>
+            </div>
+          </Field>
+        )}
+        {isClient && (
+          <p className="text-xs text-zinc-500">A temporary password will be generated and sent to the client by email.</p>
+        )}
         <Field label={t("role")}>
           <RoleSelect value={role} onChange={setRole} t={t} />
         </Field>

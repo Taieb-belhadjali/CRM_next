@@ -4,6 +4,7 @@ import User from "@/models/User";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
+import { sendClientWelcomeEmail, generatePassword } from "@/lib/email";
 
 function unauthorized(msg = "Unauthorized") {
   return withCors(Response.json({ error: msg }, { status: 401 }));
@@ -37,9 +38,9 @@ export async function POST(request) {
 
     const { name, email, password, role, account } = await request.json();
 
-    if (!name || !email || !password) {
+    if (!name || !email) {
       return withCors(
-        Response.json({ error: "name, email and password are required" }, { status: 400 })
+        Response.json({ error: "name and email are required" }, { status: 400 })
       );
     }
 
@@ -50,14 +51,23 @@ export async function POST(request) {
       return withCors(Response.json({ error: "Email already in use" }, { status: 409 }));
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const isClient = role === "client";
+    const rawPassword = password || (isClient ? generatePassword() : "changeme123!");
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       passwordHash,
-      role: role === "admin" ? "admin" : role === "client" ? "client" : "commercial",
+      role: isClient ? "client" : role === "admin" ? "admin" : "commercial",
       ...(account ? { account } : {}),
     });
+
+    if (isClient) {
+      sendClientWelcomeEmail(user.email, rawPassword, user.name).catch((err) => {
+        console.error("Failed to send welcome email:", err);
+      });
+    }
 
     logActivity({
       auth,
@@ -71,7 +81,7 @@ export async function POST(request) {
 
     return withCors(
       Response.json(
-        { id: user._id, name: user.name, email: user.email, role: user.role },
+        { id: user._id, name: user.name, email: user.email, role: user.role, ...(isClient ? { password: rawPassword } : {}) },
         { status: 201 }
       )
     );

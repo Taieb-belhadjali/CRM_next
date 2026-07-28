@@ -40,8 +40,8 @@ export function loginApi(email: string, password: string) {
 export interface RegisterPayload {
   name: string;
   email: string;
-  password: string;
-  role?: "admin" | "commercial";
+  password?: string;
+  role?: "admin" | "commercial" | "client";
   token?: string;
 }
 
@@ -49,7 +49,7 @@ export interface RegisterResponse {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "commercial";
+  role: "admin" | "commercial" | "client";
 }
 
 export function registerApi(payload: RegisterPayload) {
@@ -79,6 +79,7 @@ export interface AdminUser {
   isActive: boolean;
   createdAt: string;
   account?: string;
+  password?: string;
 }
 
 export function listUsers(token: string) {
