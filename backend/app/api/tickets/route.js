@@ -1,6 +1,9 @@
 import dbConnect from "@/lib/mongodb";
 import Ticket from "@/models/Ticket";
+import Contact from "@/models/Contact"; // must be imported to register schema for populate
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
+import { enforceClientAccountAccess } from "@/lib/clientAccess";
 import { withCors, handlePreflight } from "@/lib/cors";
 
 import { logActivity } from "@/lib/activity";
@@ -10,6 +13,7 @@ function unauth() { return withCors(Response.json({ error: "Unauthorized" }, { s
 export async function GET(request) {
   try {
     const auth = getAuthUser(request);
+    console.log("TICKETS LIST auth:", auth ? { sub: auth.sub, email: auth.email, role: auth.role, account: auth.account } : null);
     if (!auth) return unauth();
     const { searchParams } = new URL(request.url);
     const status   = searchParams.get("status");
@@ -22,12 +26,25 @@ export async function GET(request) {
     if (status)   filter.status   = status;
     if (priority) filter.priority = priority;
     if (search)   filter.$or = [{ subject: new RegExp(search, "i") }, { description: new RegExp(search, "i") }];
-    const [tickets, total] = await Promise.all([
-      Ticket.find(filter).populate("contact", "firstName lastName email").populate("account", "name").populate("assignee", "name email").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
-      Ticket.countDocuments(filter),
-    ]);
+    const clientFilter = enforceClientAccountAccess(auth);
+    if (clientFilter !== null) Object.assign(filter, clientFilter);
+    console.log("TICKETS LIST filter:", JSON.stringify(filter));
+    let tickets, total;
+    try {
+      [tickets, total] = await Promise.all([
+        Ticket.find(filter).populate("contact", "firstName lastName email").populate("account", "name").populate("assignee", "name email").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+        Ticket.countDocuments(filter),
+      ]);
+    } catch (queryError) {
+      console.error("TICKETS LIST query failed:", queryError);
+      throw queryError;
+    }
+    console.log("TICKETS LIST result count:", tickets.length, "total:", total);
     return withCors(Response.json({ tickets, total, page, limit }));
-  } catch (e) { console.error(e); return withCors(Response.json({ error: "Something went wrong." }, { status: 500 })); }
+  } catch (e) {
+    console.error("GET /api/tickets failed:", e);
+    return withCors(Response.json({ error: e instanceof Error ? e.message : "Something went wrong." }, { status: 500 }));
+  }
 }
 
 export async function POST(request) {

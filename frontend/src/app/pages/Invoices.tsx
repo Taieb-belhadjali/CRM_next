@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Receipt, Download, CheckCircle, Clock, XCircle, Send, CreditCard } from "lucide-react";
 import {
   listInvoices, createInvoice, updateInvoice, deleteInvoice, downloadPdf,
-  listAccounts, listContacts,
+  listAccounts, listContacts, listUsersPublic,
   type Invoice, type InvoicePayload, type InvoiceStatus, type LineItem,
   type Account, type Contact,
 } from "../api";
@@ -59,8 +59,8 @@ function getStatusTransitions(t: (key: string) => string) {
 
 // ── Form ──────────────────────────────────────────────────────────────────────
 
-function InvoiceForm({ initial, accounts, contacts, onSave, onCancel, token }: {
-  initial?: Invoice | null; accounts: Account[]; contacts: Contact[];
+function InvoiceForm({ initial, accounts, contacts, clients, onSave, onCancel, token }: {
+  initial?: Invoice | null; accounts: Account[]; contacts: Contact[]; clients: { _id: string; name: string }[];
   onSave: (inv: Invoice) => void; onCancel: () => void; token: string;
 }) {
   const { t } = useLanguage();
@@ -71,6 +71,7 @@ function InvoiceForm({ initial, accounts, contacts, onSave, onCancel, token }: {
     dueDate:     initial?.dueDate     ? initial.dueDate.slice(0, 10)     : "",
     account:     (initial?.account  as { _id: string } | null | undefined)?._id ?? "",
     contact:     (initial?.contact  as { _id: string } | null | undefined)?._id ?? "",
+    client:      (initial?.client   as { _id: string } | null | undefined)?._id ?? "",
     paidAmount:  initial?.paidAmount  ?? 0,
     lineItems:   initial?.lineItems   ?? [],
     notes:       initial?.notes       ?? "",
@@ -89,7 +90,7 @@ function InvoiceForm({ initial, accounts, contacts, onSave, onCancel, token }: {
     if (!form.title?.trim()) { setError(t("errors.titleRequired")); return; }
     setError(""); setLoading(true);
     try {
-      const payload = { ...form, account: form.account || null, contact: form.contact || null, dueDate: form.dueDate || null };
+      const payload = { ...form, account: form.account || null, contact: form.contact || null, client: form.client || null, dueDate: form.dueDate || null };
       const res = initial ? await updateInvoice(token, initial._id, payload) : await createInvoice(token, payload);
       onSave(res.invoice);
     } catch (err) { setError(err instanceof Error ? err.message : t("errors.saveFailed")); }
@@ -109,10 +110,16 @@ function InvoiceForm({ initial, accounts, contacts, onSave, onCancel, token }: {
           <input className={inputCls} type="date" value={form.dueDate ?? ""} onChange={set("dueDate")} />
         </FormField>
       </div>
-      <FormField label={t("forms.client")}>
+      <FormField label={t("forms.account")}>
         <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
           <option value="">— Aucun —</option>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+        </select>
+      </FormField>
+      <FormField label={t("forms.client")}>
+        <select className={selectCls} value={form.client ?? ""} onChange={set("client")}>
+          <option value="">— Aucun —</option>
+          {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </FormField>
       <FormField label={t("forms.contact")}>
@@ -290,6 +297,7 @@ export default function Invoices() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [clients, setClients] = useState<{ _id: string; name: string }[]>([]);
   const refLoaded = useRef(false);
 
   useEffect(() => {
@@ -298,6 +306,7 @@ export default function Invoices() {
     Promise.all([
       listAccounts(token, { limit: 100 }).then((r) => setAccounts(r.accounts)),
       listContacts(token, { limit: 100 }).then((r) => setContacts(r.contacts)),
+      listUsersPublic(token).then((users) => setClients(users.filter((u) => u.role === "client"))),
     ]).catch(() => {});
   }, [token]);
 
@@ -432,7 +441,7 @@ export default function Invoices() {
 
       <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.invoices.newInvoice") : t("pages.invoices.editInvoice")} width="w-[600px]">
         {editing !== null && (
-          <InvoiceForm initial={editing === "new" ? null : editing} accounts={accounts} contacts={contacts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
+          <InvoiceForm initial={editing === "new" ? null : editing} accounts={accounts} contacts={contacts} clients={clients} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}
       </SlideOver>
 

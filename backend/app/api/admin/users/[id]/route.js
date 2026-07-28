@@ -30,7 +30,7 @@ export async function PATCH(request, { params }) {
 
   const allowed = {};
   if (typeof body.isActive === "boolean") allowed.isActive = body.isActive;
-  if (body.role === "admin" || body.role === "commercial") allowed.role = body.role;
+  if (body.role === "admin" || body.role === "commercial" || body.role === "client") allowed.role = body.role;
   if (typeof body.name === "string" && body.name.trim()) allowed.name = body.name.trim();
   if (typeof body.email === "string" && body.email.trim()) {
     const newEmail = body.email.trim().toLowerCase();
@@ -43,7 +43,7 @@ export async function PATCH(request, { params }) {
     allowed.email = newEmail;
   }
 
-  const user = await User.findByIdAndUpdate(id, allowed, { new: true }).select("-passwordHash");
+  const user = await User.findByIdAndUpdate(id, allowed, { returnDocument: "after" }).select("-passwordHash");
   if (!user) {
     return withCors(Response.json({ error: "User not found" }, { status: 404 }));
   }

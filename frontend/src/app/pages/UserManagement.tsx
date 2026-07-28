@@ -31,6 +31,7 @@ import { useLanguage } from "../context/LanguageContext";
 const ROLE_STYLES = {
   admin: "bg-violet-50 text-violet-700 border border-violet-200",
   commercial: "bg-blue-50 text-blue-700 border border-blue-200",
+  client: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
 function getInitials(name: string) {
@@ -174,7 +175,7 @@ export default function UserManagement() {
     setTogglingId(u._id);
     setActionError("");
     try {
-      const newRole = u.role === "admin" ? "commercial" : "admin";
+      const newRole = u.role === "admin" ? "commercial" : u.role === "commercial" ? "client" : "admin";
       const { user: updated } = await updateUser(token, u._id, { role: newRole });
       setUsers((prev) => prev.map((x) => (x._id === u._id ? updated : x)));
     } catch (err) {
@@ -201,10 +202,12 @@ export default function UserManagement() {
 
   const admins = users.filter((u) => u.role === "admin");
   const commercials = users.filter((u) => u.role === "commercial");
+  const clients = users.filter((u) => u.role === "client");
 
   const groups = [
     { key: "admin", label: t("sectionsAdmin"), items: admins, icon: Shield },
     { key: "commercial", label: t("sectionsCommercial"), items: commercials, icon: Users },
+    { key: "client", label: t("sectionsClient"), items: clients, icon: UserPlus },
   ] as const;
 
   return (
@@ -322,13 +325,15 @@ export default function UserManagement() {
                           <button
                             onClick={() => handleToggleRole(u)}
                             disabled={isMe || busy}
-                            title={u.role === "admin" ? t("Make commercial") : t("Make admin")}
+                            title={u.role === "admin" ? t("Make commercial") : u.role === "commercial" ? t("Make client") : t("Make admin")}
                             className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           >
                             {u.role === "admin" ? (
-                              <ShieldOff className="w-4 h-4" strokeWidth={1.75} />
+                              <ShieldOff className="w-4 h-4 strokeWidth={1.75}" />
+                            ) : u.role === "commercial" ? (
+                              <UserPlus className="w-4 h-4 strokeWidth={1.75}" />
                             ) : (
-                              <Shield className="w-4 h-4" strokeWidth={1.75} />
+                              <Shield className="w-4 h-4 strokeWidth={1.75}" />
                             )}
                           </button>
 
@@ -390,7 +395,7 @@ function InviteModal({ onClose, onInvited, token, t }: { onClose: () => void; on
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"commercial" | "admin">("commercial");
+  const [role, setRole] = useState<"commercial" | "admin" | "client">("commercial");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -414,7 +419,7 @@ function InviteModal({ onClose, onInvited, token, t }: { onClose: () => void; on
       if (created) onInvited(created);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("genericError"));
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -457,7 +462,7 @@ function InviteModal({ onClose, onInvited, token, t }: { onClose: () => void; on
 function EditModal({ user, onClose, onUpdated, token, t }: { user: AdminUser; onClose: () => void; onUpdated: (user: AdminUser) => void; token: string; t: (key: string, params?: Record<string, string>) => string; }) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  const [role, setRole] = useState<"commercial" | "admin">(user.role);
+  const [role, setRole] = useState<"commercial" | "admin" | "client">(user.role);
   const [isActive, setIsActive] = useState(user.isActive);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -560,7 +565,7 @@ function ConfirmDelete({ user, onConfirm, onCancel, loading, t }: { user: AdminU
   );
 }
 
-function RoleSelect({ value, onChange, t }: { value: "commercial" | "admin"; onChange: (v: "commercial" | "admin") => void; t: (key: string, params?: Record<string, string>) => string; }) {
+function RoleSelect({ value, onChange, t }: { value: "commercial" | "admin" | "client"; onChange: (v: "commercial" | "admin" | "client") => void; t: (key: string, params?: Record<string, string>) => string; }) {
   return (
     <div className="relative">
       <ChevronDown
@@ -569,11 +574,12 @@ function RoleSelect({ value, onChange, t }: { value: "commercial" | "admin"; onC
       />
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value as "commercial" | "admin")}
+        onChange={(e) => onChange(e.target.value as "commercial" | "admin" | "client")}
         className="w-full appearance-none px-3 py-2.5 text-sm bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
       >
         <option value="commercial">{t("commercialRole")}</option>
         <option value="admin">{t("adminRole")}</option>
+        <option value="client">{t("clientRole")}</option>
       </select>
     </div>
   );

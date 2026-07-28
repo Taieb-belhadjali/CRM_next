@@ -42,6 +42,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   role?: "admin" | "commercial";
+  token?: string;
 }
 
 export interface RegisterResponse {
@@ -74,13 +75,20 @@ export interface AdminUser {
   _id: string;
   name: string;
   email: string;
-  role: "admin" | "commercial";
+  role: "admin" | "commercial" | "client";
   isActive: boolean;
   createdAt: string;
+  account?: string;
 }
 
 export function listUsers(token: string) {
   return request<{ users: AdminUser[] }>("/api/admin/users", {}, token).then(
+    (r) => r.users
+  );
+}
+
+export function listUsersPublic(token: string) {
+  return request<{ users: AdminUser[] }>("/api/users", {}, token).then(
     (r) => r.users
   );
 }
@@ -104,7 +112,7 @@ export function changeUserRole(token: string, userId: string, role: "admin" | "c
 export interface UpdateUserPayload {
   name?: string;
   email?: string;
-  role?: "admin" | "commercial";
+  role?: "admin" | "commercial" | "client";
   isActive?: boolean;
 }
 
@@ -127,6 +135,22 @@ export function deleteUser(token: string, userId: string) {
 export function inviteUser(token: string, payload: RegisterPayload) {
   return request<RegisterResponse>(
     "/api/admin/users",
+    { method: "POST", body: JSON.stringify(payload) },
+    token
+  );
+}
+
+export function listSignupTokens(token: string) {
+  return request<{ tokens: Array<{ _id: string; token: string; email: string; name: string; account: string; used: boolean; createdAt: string }> }>(
+    "/api/admin/signup-tokens",
+    {},
+    token
+  );
+}
+
+export function createSignupToken(token: string, payload: { email: string; name: string; accountId: string }) {
+  return request<{ token: string; email: string; name: string; accountId: string }>(
+    "/api/admin/signup-tokens",
     { method: "POST", body: JSON.stringify(payload) },
     token
   );
@@ -455,6 +479,7 @@ export interface Deal {
   account?: { _id: string; name: string } | null;
   contacts?: { _id: string; firstName: string; lastName: string; email?: string }[];
   owner?: OwnerRef;
+  client?: { _id: string; name: string; email?: string } | null;
   expectedCloseDate?: string;
   createdAt: string;
   updatedAt: string;
@@ -467,6 +492,7 @@ export interface DealPayload {
   account?: string | null;
   contacts?: string[];
   expectedCloseDate?: string | null;
+  client?: string | null;
   order?: number;
 }
 
@@ -719,6 +745,7 @@ export interface Quote {
   contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
   account?: { _id: string; name: string } | null;
   owner?:   OwnerRef;
+  client?:  { _id: string; name: string; email?: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -731,6 +758,7 @@ export interface QuotePayload {
   deal?: string | null;
   contact?: string | null;
   account?: string | null;
+  client?: string | null;
   lineItems?: LineItem[];
   notes?: string;
   terms?: string;
@@ -792,6 +820,7 @@ export interface Invoice {
   contact?: { _id: string; firstName: string; lastName: string; email?: string } | null;
   account?: { _id: string; name: string } | null;
   owner?:   OwnerRef;
+  client?:  { _id: string; name: string; email?: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -806,6 +835,7 @@ export interface InvoicePayload {
   deal?: string | null;
   contact?: string | null;
   account?: string | null;
+  client?: string | null;
   lineItems?: LineItem[];
   notes?: string;
   terms?: string;

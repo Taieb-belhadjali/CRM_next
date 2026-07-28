@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Ticket } from "lucide-react";
-import { listTickets, createTicket, updateTicket, deleteTicket, listContacts, listAccounts, listUsers, type Ticket as TicketType, type TicketPayload, type TicketStatus, type TicketPriority, type Contact, type Account, type AdminUser } from "../api";
+import { listTickets, createTicket, updateTicket, deleteTicket, listContacts, listAccounts, listUsersPublic, type Ticket as TicketType, type TicketPayload, type TicketStatus, type TicketPriority, type Contact, type Account, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -142,7 +142,7 @@ export default function Tickets() {
     Promise.all([
       listContacts(token, { limit: 100 }).then((r) => setContacts(r.contacts)),
       listAccounts(token, { limit: 100 }).then((r) => setAccounts(r.accounts)),
-      listUsers(token).then(setUsers),
+      listUsersPublic(token).then(setUsers),
     ]).catch(() => {});
   }, [token]);
 

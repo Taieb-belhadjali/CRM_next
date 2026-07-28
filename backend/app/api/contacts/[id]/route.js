@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Contact from "@/models/Contact";
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";

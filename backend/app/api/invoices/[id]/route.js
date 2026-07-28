@@ -1,6 +1,8 @@
 import dbConnect from "@/lib/mongodb";
 import Invoice from "@/models/Invoice";
 import Order from "@/models/Order";
+import Contact from "@/models/Contact"; // must be imported to register schema for populate
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
@@ -14,6 +16,7 @@ const POPULATE = [
   { path: "account", select: "name" },
   { path: "deal",    select: "title" },
   { path: "owner",   select: "name email" },
+  { path: "client",  select: "name email" },
 ];
 
 /** GET /api/invoices/:id */
@@ -41,7 +44,7 @@ export async function PATCH(request, { params }) {
     if (!invoice) return withCors(Response.json({ error: "Invoice not found" }, { status: 404 }));
 
     const fields = ["title", "status", "issueDate", "dueDate", "paidDate",
-                    "paidAmount", "deal", "contact", "account",
+                    "paidAmount", "deal", "contact", "account", "client",
                     "notes", "terms", "paymentInfo"];
     for (const f of fields) {
       if (body[f] !== undefined) invoice[f] = body[f] ?? null;

@@ -26,6 +26,7 @@ const en: Translations = {
     admin: "Admin",
     adminRole: "Admin",
     commercialRole: "Commercial",
+    clientRole: "Client",
   },
   common: {
     save: "Save",
@@ -218,7 +219,7 @@ const en: Translations = {
     purchaseOrders: { title: "Purchase Orders", subtitle: "Manage purchase orders", searchPlaceholder: "Search purchase orders…", newPO: "New PO", noPOs: "No purchase orders yet.", reference: "Reference", totalIncTax: "Total", date: "Date", lineItems: "Order lines", editPO: "Edit PO", allStatuses: "All statuses", createPO: "Create PO", statusOrder: "Order", statusMarkReceived: "Mark as received", statusResetPending: "Reset to pending" },
     deliveries: { title: "Deliveries", subtitle: "Manage deliveries", searchPlaceholder: "Search deliveries…", newDelivery: "New delivery", noDeliveries: "No deliveries yet.", allStatuses: "All statuses", editDelivery: "Edit delivery", detailSubtitle: "Delivery detail", deliveryTitle: "Delivery {{number}}", order: "Order", deliveredOn: "Delivered on", transitionShip: "Ship", transitionDelivered: "Mark delivered", transitionReopen: "Reopen preparation", createDelivery: "Create delivery", deliverySingular: "delivery", deliveryPlural: "deliveries", reference: "Reference", deliveryColumn: "Delivery" },
     activityLog: { title: "Activity Log", subtitle: "System activity", searchPlaceholder: "Search user, action, entity, label, IP…", countLabel: "events", allActions: "All actions", allEntities: "All entities", allUsers: "All users", noResults: "No activity found.", tryThese: "Try", clearAll: "Clear all", hint: "Understands: names, entities (deal, contact…), actions (deleted, created…), dates (today, yesterday, this week), IP addresses", groupAuth: "Auth", groupContacts: "Contacts", groupAccounts: "Accounts", groupProspects: "Prospects", groupDeals: "Deals", groupTasks: "Tasks", groupCalls: "Calls", groupMeetings: "Meetings", groupTickets: "Tickets", groupUsers: "Users" },
-    userManagement: { title: "User Management", subtitle: "Manage users", inviteUser: "Invite user", createAccount: "Create a new account for a team member.", fullName: "Full name", emailAddress: "Email address", temporaryPassword: "Temporary password", sectionsAdmin: "Admins", sectionsCommercial: "Commercial", teamMembers: "{{count}} team member{{countPlural}}", you: "You", editUser: "Edit user", deactivate: "Deactivate", activate: "Activate", statusActive: "Active", statusInactive: "Inactive", makeCommercial: "Make commercial", makeAdmin: "Make admin", deleteUser: "Delete user", confirmDeleteTitle: "Delete user?", permanentlyRemoved: "<span className=\"font-medium text-zinc-700\">{{name}}</span> ({{email}}) will be permanently removed. This action cannot be undone.", fieldStatus: "Status", passwordMinLength: "Password must be at least 8 characters.", allFieldsRequired: "All fields are required.", nameAndEmailRequired: "Name and email are required.", editing: "Editing {{name}}", failedToggleUser: "Failed to update user.", failedToggleRole: "Failed to update role.", failedDeleteUser: "Failed to delete user.", fetchFailed: "Failed to fetch users." },
+    userManagement: { title: "User Management", subtitle: "Manage users", inviteUser: "Invite user", createAccount: "Create a new account for a team member.", fullName: "Full name", emailAddress: "Email address", temporaryPassword: "Temporary password", sectionsAdmin: "Admins", sectionsCommercial: "Commercial", sectionsClient: "Clients", teamMembers: "{{count}} team member{{countPlural}}", you: "You", editUser: "Edit user", deactivate: "Deactivate", activate: "Activate", statusActive: "Active", statusInactive: "Inactive", makeCommercial: "Make commercial", makeAdmin: "Make admin", makeClient: "Make client", deleteUser: "Delete user", confirmDeleteTitle: "Delete user?", permanentlyRemoved: "<span className=\"font-medium text-zinc-700\">{{name}}</span> ({{email}}) will be permanently removed. This action cannot be undone.", fieldStatus: "Status", passwordMinLength: "Password must be at least 8 characters.", allFieldsRequired: "All fields are required.", nameAndEmailRequired: "Name and email are required.", editing: "Editing {{name}}", failedToggleUser: "Failed to update user.", failedToggleRole: "Failed to update role.", failedDeleteUser: "Failed to delete user.", fetchFailed: "Failed to fetch users." },
   },
   login: {
     title: "Sign in to your account",
@@ -355,6 +356,13 @@ const en: Translations = {
     conversionFailed: "Conversion failed.",
     statusUpdateFailed: "Status update failed.",
   },
+  portal: {
+    dashboard: "Portal Dashboard",
+    deals: "My Deals",
+    quotes: "My Quotes",
+    invoices: "My Invoices",
+    tickets: "My Tickets",
+  },
 };
 
 const fr: Translations = {
@@ -383,6 +391,7 @@ const fr: Translations = {
     admin: "Admin",
     adminRole: "Admin",
     commercialRole: "Commercial",
+    clientRole: "Client",
   },
   common: {
     save: "Enregistrer",
@@ -575,7 +584,7 @@ const fr: Translations = {
     purchaseOrders: { title: "Bons de commande", subtitle: "Gérez les achats", searchPlaceholder: "Rechercher un BC…", newPO: "Nouveau BC", noPOs: "Aucun bon de commande.", reference: "Référence", totalIncTax: "Total TTC", date: "Date", lineItems: "Lignes de commande", editPO: "Modifier le BC", allStatuses: "Tous les statuts", createPO: "Créer le BC", statusOrder: "Commander", statusMarkReceived: "Marquer reçu", statusResetPending: "Remettre en attente" },
     deliveries: { title: "Livraisons", subtitle: "Gérez les livraisons", searchPlaceholder: "Rechercher une livraison…", newDelivery: "Nouvelle livraison", noDeliveries: "Aucune livraison.", allStatuses: "Tous les statuts", editDelivery: "Modifier la livraison", detailSubtitle: "Détail de la livraison", deliveryTitle: "Livraison {{number}}", order: "Commande", deliveredOn: "Livrée le", transitionShip: "Expédier", transitionDelivered: "Marquer livrée", transitionReopen: "Remettre en préparation", createDelivery: "Créer la livraison", deliverySingular: "livraison", deliveryPlural: "livraisons", reference: "Référence", deliveryColumn: "Livraison" },
     activityLog: { title: "Journal d'activité", subtitle: "Activité système", searchPlaceholder: "Rechercher utilisateur, action, entité, IP…", countLabel: "événements", allActions: "Toutes les actions", allEntities: "Toutes les entités", allUsers: "Tous les utilisateurs", noResults: "Aucune activité trouvée.", tryThese: "Essayez", clearAll: "Tout effacer", hint: "Comprend : noms, entités (affaire, contact…), actions (supprimé, créé…), dates (aujourd'hui, hier, cette semaine), adresses IP", groupAuth: "Authentification", groupContacts: "Contacts", groupAccounts: "Comptes", groupProspects: "Prospects", groupDeals: "Affaires", groupTasks: "Tâches", groupCalls: "Appels", groupMeetings: "Réunions", groupTickets: "Tickets", groupUsers: "Utilisateurs" },
-    userManagement: { title: "Gestion des utilisateurs", subtitle: "Gérez les utilisateurs", inviteUser: "Inviter un utilisateur", createAccount: "Créer un nouveau compte pour un membre de l'équipe.", fullName: "Nom complet", emailAddress: "Adresse e-mail", temporaryPassword: "Mot de passe temporaire", sectionsAdmin: "Administrateurs", sectionsCommercial: "Commerciaux", teamMembers: "{{count}} membre{{countPlural}} de l'équipe", you: "Vous", editUser: "Modifier l'utilisateur", deactivate: "Désactiver", activate: "Activer", statusActive: "Actif", statusInactive: "Inactif", makeCommercial: "Rendre commercial", makeAdmin: "Rendre administrateur", deleteUser: "Supprimer l'utilisateur", confirmDeleteTitle: "Supprimer l'utilisateur ?", permanentlyRemoved: "<span className=\"font-medium text-zinc-700\">{{name}}</span> ({{email}}) sera définitivement supprimé. Cette action est irréversible.", fieldStatus: "Statut", passwordMinLength: "Le mot de passe doit comporter au moins 8 caractères.", allFieldsRequired: "Tous les champs sont requis.", nameAndEmailRequired: "Le nom et l'e-mail sont requis.", editing: "Modification de {{name}}", failedToggleUser: "Échec de la mise à jour de l'utilisateur.", failedToggleRole: "Échec de la mise à jour du rôle.", failedDeleteUser: "Échec de la suppression de l'utilisateur.", fetchFailed: "Échec du chargement des utilisateurs." },
+    userManagement: { title: "Gestion des utilisateurs", subtitle: "Gérez les utilisateurs", inviteUser: "Inviter un utilisateur", createAccount: "Créer un nouveau compte pour un membre de l'équipe.", fullName: "Nom complet", emailAddress: "Adresse e-mail", temporaryPassword: "Mot de passe temporaire", sectionsAdmin: "Administrateurs", sectionsCommercial: "Commerciaux", sectionsClient: "Clients", teamMembers: "{{count}} membre{{countPlural}} de l'équipe", you: "Vous", editUser: "Modifier l'utilisateur", deactivate: "Désactiver", activate: "Activer", statusActive: "Actif", statusInactive: "Inactif", makeCommercial: "Rendre commercial", makeAdmin: "Rendre administrateur", makeClient: "Rendre client", deleteUser: "Supprimer l'utilisateur", confirmDeleteTitle: "Supprimer l'utilisateur ?", permanentlyRemoved: "<span className=\"font-medium text-zinc-700\">{{name}}</span> ({{email}}) sera définitivement supprimé. Cette action est irréversible.", fieldStatus: "Statut", passwordMinLength: "Le mot de passe doit comporter au moins 8 caractères.", allFieldsRequired: "Tous les champs sont requis.", nameAndEmailRequired: "Le nom et l'e-mail sont requis.", editing: "Modification de {{name}}", failedToggleUser: "Échec de la mise à jour de l'utilisateur.", failedToggleRole: "Échec de la mise à jour du rôle.", failedDeleteUser: "Échec de la suppression de l'utilisateur.", fetchFailed: "Échec du chargement des utilisateurs." },
   },
   login: {
     title: "Connectez-vous à votre compte",
@@ -711,6 +720,13 @@ const fr: Translations = {
     genericError: "Une erreur est survenue.",
     conversionFailed: "Échec de la conversion.",
     statusUpdateFailed: "Échec de la mise à jour du statut.",
+  },
+  portal: {
+    dashboard: "Tableau de bord",
+    deals: "Mes Affaires",
+    quotes: "Mes Devis",
+    invoices: "Mes Factures",
+    tickets: "Mes Tickets",
   },
 };
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, CheckCircle2, Circle, Pencil, Trash2, Clock, CheckSquare } from "lucide-react";
-import { listTasks, createTask, updateTask, deleteTask, listUsers, type Task, type TaskPayload, type TaskPriority, type TaskStatus, type AdminUser } from "../api";
+import { listTasks, createTask, updateTask, deleteTask, listUsersPublic, type Task, type TaskPayload, type TaskPriority, type TaskStatus, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -112,7 +112,7 @@ export default function Tasks() {
   useEffect(() => {
     if (!token || usersLoaded.current) return;
     usersLoaded.current = true;
-    listUsers(token).then(setUsers).catch(() => {});
+    listUsersPublic(token).then(setUsers).catch(() => {});
   }, [token]);
 
   useEffect(() => { setPage(1); }, [search, statusFilter, priorityFilter]);

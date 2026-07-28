@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Video, Users, Link, CalendarDays } from "lucide-react";
-import { listMeetings, createMeeting, updateMeeting, deleteMeeting, listUsers, type Meeting, type MeetingPayload, type AdminUser } from "../api";
+import { listMeetings, createMeeting, updateMeeting, deleteMeeting, listUsersPublic, type Meeting, type MeetingPayload, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -166,7 +166,7 @@ export default function Meetings() {
   useEffect(() => {
     if (!token || usersLoaded.current) return;
     usersLoaded.current = true;
-    listUsers(token).then(setUsers).catch(() => {});
+    listUsersPublic(token).then(setUsers).catch(() => {});
   }, [token]);
 
   useEffect(() => {

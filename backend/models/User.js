@@ -20,7 +20,7 @@ const UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "commercial"],
+      enum: ["admin", "commercial", "client"],
       default: "commercial",
     },
     isActive: {
@@ -36,6 +36,10 @@ const UserSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "en",
+    },
+    account: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Account",
     },
   },
   { timestamps: true }

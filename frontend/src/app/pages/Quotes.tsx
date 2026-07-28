@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, FileText, Download, ArrowRightCircle, Send, CheckCircle, XCircle } from "lucide-react";
 import {
   listQuotes, createQuote, updateQuote, deleteQuote, convertQuote, downloadPdf,
-  listAccounts, listContacts,
+  listAccounts, listContacts, listUsersPublic,
   type Quote, type QuotePayload, type QuoteStatus, type LineItem,
   type Account, type Contact,
 } from "../api";
@@ -46,8 +46,8 @@ const TRANSITIONS: Record<QuoteStatus, { labelKey: string; next: QuoteStatus; ic
   rejected: [{ labelKey: "quotes.statusResetDraft",    next: "draft",    icon: Pencil,      cls: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" }],
 };
 
-function QuoteForm({ initial, accounts, contacts, onSave, onCancel, token }: {
-  initial?: Quote | null; accounts: Account[]; contacts: Contact[];
+function QuoteForm({ initial, accounts, contacts, clients, onSave, onCancel, token }: {
+  initial?: Quote | null; accounts: Account[]; contacts: Contact[]; clients: { _id: string; name: string }[];
   onSave: (q: Quote) => void; onCancel: () => void; token: string;
 }) {
   const { t } = useLanguage();
@@ -58,6 +58,7 @@ function QuoteForm({ initial, accounts, contacts, onSave, onCancel, token }: {
     validUntil: initial?.validUntil ? initial.validUntil.slice(0, 10) : "",
     account:    (initial?.account  as { _id: string } | null | undefined)?._id ?? "",
     contact:    (initial?.contact  as { _id: string } | null | undefined)?._id ?? "",
+    client:     (initial?.client   as { _id: string } | null | undefined)?._id ?? "",
     lineItems:  initial?.lineItems ?? [],
     notes:      initial?.notes  ?? "",
     terms:      initial?.terms  ?? "",
@@ -74,7 +75,7 @@ function QuoteForm({ initial, accounts, contacts, onSave, onCancel, token }: {
     if (!form.title?.trim()) { setError(t("errors.titleRequired")); return; }
     setError(""); setLoading(true);
     try {
-      const payload = { ...form, account: form.account || null, contact: form.contact || null };
+      const payload = { ...form, account: form.account || null, contact: form.contact || null, client: form.client || null };
       const res = initial ? await updateQuote(token, initial._id, payload) : await createQuote(token, payload);
       onSave(res.quote);
     } catch (err) { setError(err instanceof Error ? err.message : t("errors.saveFailed")); }
@@ -104,6 +105,12 @@ function QuoteForm({ initial, accounts, contacts, onSave, onCancel, token }: {
         <select className={selectCls} value={form.contact ?? ""} onChange={set("contact")}>
           <option value="">— {t("forms.contact")} —</option>
           {contacts.map((c) => <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>)}
+        </select>
+      </FormField>
+      <FormField label={t("forms.client")}>
+        <select className={selectCls} value={form.client ?? ""} onChange={set("client")}>
+          <option value="">— {t("forms.client")} —</option>
+          {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </FormField>
 
@@ -292,6 +299,7 @@ export default function Quotes() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [clients, setClients] = useState<{ _id: string; name: string }[]>([]);
   const refLoaded = useRef(false);
 
   useEffect(() => {
@@ -300,6 +308,7 @@ export default function Quotes() {
     Promise.all([
       listAccounts(token, { limit: 100 }).then((r) => setAccounts(r.accounts)),
       listContacts(token, { limit: 100 }).then((r) => setContacts(r.contacts)),
+      listUsersPublic(token).then((users) => setClients(users.filter((u) => u.role === "client"))),
     ]).catch(() => {});
   }, [token]);
 
@@ -433,7 +442,7 @@ export default function Quotes() {
 
       <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("quotes.createQuote") : t("quotes.editQuote")} width="w-[600px]">
         {editing !== null && (
-          <QuoteForm initial={editing === "new" ? null : editing} accounts={accounts} contacts={contacts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
+          <QuoteForm initial={editing === "new" ? null : editing} accounts={accounts} contacts={contacts} clients={clients} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}
       </SlideOver>
 

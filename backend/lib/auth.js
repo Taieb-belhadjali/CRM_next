@@ -14,6 +14,7 @@ export function signToken(user) {
       sub: user._id.toString(),
       email: user.email,
       role: user.role,
+      account: user.account?.toString() || null,
     },
     JWT_SECRET,
     { expiresIn: TOKEN_EXPIRY }

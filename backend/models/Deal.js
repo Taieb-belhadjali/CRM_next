@@ -36,6 +36,10 @@ const DealSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     expectedCloseDate: {
       type: Date,
     },

@@ -29,6 +29,7 @@ const QuoteSchema = new mongoose.Schema(
     contact:     { type: mongoose.Schema.Types.ObjectId, ref: "Contact" },
     account:     { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
     owner:       { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    client:      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     lineItems:   [LineItemSchema],
     subtotal:    { type: Number, default: 0 },
     taxTotal:    { type: Number, default: 0 },

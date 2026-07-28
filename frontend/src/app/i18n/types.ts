@@ -305,4 +305,11 @@ export interface Translations {
     medium: string;
     low: string;
   };
+  portal: {
+    dashboard: string;
+    deals: string;
+    quotes: string;
+    invoices: string;
+    tickets: string;
+  };
 }

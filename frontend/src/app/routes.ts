@@ -22,7 +22,14 @@ import PurchaseOrders from "./pages/PurchaseOrders";
 import Deliveries from "./pages/Deliveries";
 import SearchPage from "./pages/Search";
 import SettingsPage from "./pages/Settings";
+import PortalLayout from "./pages/PortalLayout";
+import PortalDashboard from "./pages/PortalDashboard";
+import PortalDeals from "./pages/PortalDeals";
+import PortalQuotes from "./pages/PortalQuotes";
+import PortalInvoices from "./pages/PortalInvoices";
+import PortalTickets from "./pages/PortalTickets";
 import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
+import { ClientRoute } from "./components/ClientRoute";
 
 function makeStub(title: string, description: string) {
   return function Stub() {
@@ -34,6 +41,24 @@ export const router = createBrowserRouter([
   // Public
   { path: "/login",    Component: Login },
   { path: "/register", Component: Register },
+
+  // Client Portal
+  {
+    Component: ClientRoute,
+    children: [
+      {
+        path: "/portal",
+        Component: PortalLayout,
+        children: [
+          { index: true, Component: PortalDashboard },
+          { path: "deals", Component: PortalDeals },
+          { path: "quotes", Component: PortalQuotes },
+          { path: "invoices", Component: PortalInvoices },
+          { path: "tickets", Component: PortalTickets },
+        ],
+      },
+    ],
+  },
 
   // Authenticated
   {

@@ -1,5 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import Quote from "@/models/Quote";
+import Contact from "@/models/Contact"; // must be imported to register schema for populate
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
@@ -12,6 +14,7 @@ const POPULATE = [
   { path: "account", select: "name" },
   { path: "deal",    select: "title" },
   { path: "owner",   select: "name email" },
+  { path: "client",  select: "name email" },
 ];
 
 /** GET /api/quotes/:id */
@@ -39,7 +42,7 @@ export async function PATCH(request, { params }) {
     if (!quote) return withCors(Response.json({ error: "Quote not found" }, { status: 404 }));
 
     const fields = ["title", "status", "issueDate", "validUntil", "deal",
-                    "contact", "account", "notes", "terms"];
+                    "contact", "account", "client", "notes", "terms"];
     for (const f of fields) {
       if (body[f] !== undefined) quote[f] = body[f] || null;
     }

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import {
   listDeals, createDeal, updateDeal, deleteDeal, reorderDeals,
-  listAccounts,
+  listAccounts, listUsersPublic,
   type Deal, type DealPayload, type DealStage,
   type Account,
 } from "../api";
@@ -60,18 +60,20 @@ function StageBadge({ stage }: { stage: string }) {
 interface FormProps {
   initial?: Deal | null;
   accounts: Account[];
+  clients: { _id: string; name: string }[];
   onSave: (d: Deal) => void;
   onCancel: () => void;
   token: string;
 }
 
-function DealForm({ initial, accounts, onSave, onCancel, token }: FormProps) {
+function DealForm({ initial, accounts, clients, onSave, onCancel, token }: FormProps) {
   const { t } = useLanguage();
   const [form, setForm] = useState<DealPayload>({
     title: initial?.title ?? "",
     stage: initial?.stage ?? "prospection",
     value: initial?.value ?? 0,
     account: (initial?.account as { _id: string } | null | undefined)?._id ?? "",
+    client: (initial?.client as { _id: string } | null | undefined)?._id ?? "",
     expectedCloseDate: initial?.expectedCloseDate ? initial.expectedCloseDate.slice(0, 10) : "",
   });
   const [loading, setLoading] = useState(false);
@@ -90,6 +92,7 @@ function DealForm({ initial, accounts, onSave, onCancel, token }: FormProps) {
         ...form,
         value: Number(form.value) || 0,
         account: form.account || null,
+        client: form.client || null,
         expectedCloseDate: form.expectedCloseDate || null,
       };
       const res = initial
@@ -120,6 +123,12 @@ function DealForm({ initial, accounts, onSave, onCancel, token }: FormProps) {
         <select className={selectCls} value={form.account ?? ""} onChange={set("account")}>
           <option value="">{t("forms.account")}</option>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+        </select>
+      </FormField>
+      <FormField label="Client">
+        <select className={selectCls} value={form.client ?? ""} onChange={set("client")}>
+          <option value="">Client</option>
+          {clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </FormField>
       <FormField label={t("forms.expectedCloseDate")}>
@@ -235,6 +244,7 @@ export default function Deals() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [clients, setClients] = useState<{ _id: string; name: string }[]>([]);
   const refLoaded = useRef(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -245,6 +255,7 @@ export default function Deals() {
     refLoaded.current = true;
     Promise.all([
       listAccounts(token, { limit: 100 }).then((r) => setAccounts(r.accounts)),
+      listUsersPublic(token).then((users) => setClients(users.filter((u) => u.role === "client"))),
     ]).catch(() => {});
   }, [token]);
 
@@ -417,7 +428,7 @@ export default function Deals() {
       {/* Form slide-over */}
       <SlideOver open={!!editing} onClose={() => setEditing(null)} title={editing === "new" ? t("pages.deals.newDeal") : t("forms.edit")}>
         {editing !== null && (
-          <DealForm initial={editing === "new" ? null : editing} accounts={accounts} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
+          <DealForm initial={editing === "new" ? null : editing} accounts={accounts} clients={clients} token={token!} onSave={handleSaved} onCancel={() => setEditing(null)} />
         )}
       </SlideOver>
 

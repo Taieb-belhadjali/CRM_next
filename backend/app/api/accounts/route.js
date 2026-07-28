@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import Account from "@/models/Account";
 import { getAuthUser } from "@/lib/auth";
+import { enforceClientAccountAccess } from "@/lib/clientAccess";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
 
@@ -27,6 +28,8 @@ export async function GET(request) {
     filter.$or = [{ name: re }, { sector: re }];
   }
   if (status) filter.status = status;
+  const clientFilter = enforceClientAccountAccess(auth);
+  if (clientFilter !== null) Object.assign(filter, clientFilter);
 
   const [accounts, total] = await Promise.all([
     Account.find(filter)

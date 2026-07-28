@@ -1,6 +1,9 @@
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
+import Contact from "@/models/Contact"; // must be imported to register schema for populate
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
+import { enforceClientAccountAccess } from "@/lib/clientAccess";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
 
@@ -24,6 +27,8 @@ export async function GET(request) {
       { title: new RegExp(search, "i") },
       { number: new RegExp(search, "i") },
     ];
+    const clientFilter = enforceClientAccountAccess(auth);
+    if (clientFilter !== null) Object.assign(filter, clientFilter);
     const [orders, total] = await Promise.all([
       Order.find(filter)
         .populate("contact", "firstName lastName email")

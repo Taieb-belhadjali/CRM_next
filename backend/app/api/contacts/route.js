@@ -1,6 +1,8 @@
 import dbConnect from "@/lib/mongodb";
 import Contact from "@/models/Contact";
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
+import { enforceClientAccountAccess } from "@/lib/clientAccess";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
 
@@ -25,6 +27,8 @@ export async function GET(request) {
       filter.$or = [{ firstName: re }, { lastName: re }, { email: re }, { company: re }];
     }
     if (accountId) filter.account = accountId;
+    const clientFilter = enforceClientAccountAccess(auth);
+    if (clientFilter !== null) Object.assign(filter, clientFilter);
     const [contacts, total] = await Promise.all([
       Contact.find(filter).populate("account", "name").populate("owner", "name email").sort({ lastName: 1, firstName: 1 }).skip((page - 1) * limit).limit(limit).lean(),
       Contact.countDocuments(filter),

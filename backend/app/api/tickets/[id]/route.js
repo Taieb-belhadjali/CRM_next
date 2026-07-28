@@ -1,7 +1,10 @@
 import dbConnect from "@/lib/mongodb";
 import Ticket from "@/models/Ticket";
+import Contact from "@/models/Contact"; // must be imported to register schema for populate
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
+import { logActivity } from "@/lib/activity";
 
 function unauth() { return withCors(Response.json({ error: "Unauthorized" }, { status: 401 })); }
 

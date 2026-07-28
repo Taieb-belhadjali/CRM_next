@@ -26,7 +26,11 @@ export default function Login() {
     try {
       const { token, user } = await loginApi(email, password);
       login(token, user);
-      navigate("/");
+      if (user.role === "client") {
+        navigate("/portal");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {

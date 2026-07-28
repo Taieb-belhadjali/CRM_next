@@ -1,12 +1,15 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router";
 import { Zap, Eye, EyeOff, ArrowRight, Lock, Mail, User } from "lucide-react";
 import { registerApi } from "../api";
 import { useLanguage } from "../context/LanguageContext";
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useLanguage();
+  const token = searchParams.get("token") || "";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +18,13 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (token) {
+      const emailFromToken = searchParams.get("email");
+      if (emailFromToken) setEmail(emailFromToken);
+    }
+  }, [token, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +43,7 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      await registerApi({ name, email, password });
+      await registerApi({ name, email, password, token: token || undefined });
       setSuccess(true);
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
@@ -45,7 +55,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen w-screen flex font-[Inter,sans-serif]">
-      {/* Left panel — branding */}
       <div className="hidden lg:flex w-[480px] min-w-[480px] bg-zinc-900 flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5" style={{
           backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
@@ -53,7 +62,6 @@ export default function Register() {
         }} />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
         <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 rounded-full blur-2xl translate-x-1/2 -translate-y-1/2" />
-
         <div className="relative">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
@@ -62,7 +70,6 @@ export default function Register() {
             <span className="text-white font-semibold text-base tracking-tight">PulseCRM</span>
           </div>
         </div>
-
         <div className="relative space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-white leading-snug">
@@ -72,45 +79,11 @@ export default function Register() {
               {t("register.taglineSub")}
             </p>
           </div>
-          <div className="space-y-3">
-            {[
-              { stat: "2 min", label: t("register.stat1") },
-              { stat: "100%", label: t("register.stat2") },
-              { stat: "24/7", label: t("register.stat3") },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3">
-                <div className="w-1 h-8 bg-blue-500 rounded-full" />
-                <div>
-                  <span className="text-white font-bold text-lg leading-none">{item.stat}</span>
-                  <span className="text-zinc-500 text-xs ml-2">{item.label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative">
-          <div className="flex items-center gap-3 p-4 bg-zinc-800/60 rounded-xl border border-zinc-700/50 backdrop-blur-sm">
-            <div className="w-9 h-9 rounded-full bg-violet-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-              AP
-            </div>
-            <div>
-              <p className="text-white text-sm font-medium leading-none mb-1">Alex Petit</p>
-              <p className="text-zinc-400 text-xs">Sales Rep · Joined last week</p>
-            </div>
-            <div className="ml-auto">
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/20 rounded-full px-2 py-1 font-medium">
-                {t("register.newBadge")}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Right panel — form */}
       <div className="flex-1 flex items-center justify-center bg-zinc-50 p-8">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
           <div className="flex items-center gap-2.5 mb-10 lg:hidden">
             <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
@@ -120,7 +93,7 @@ export default function Register() {
 
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-zinc-900">{t("register.title")}</h2>
-            <p className="text-zinc-500 text-sm mt-1.5">{t("register.subtitle")}</p>
+            <p className="text-zinc-500 text-sm mt-1.5">{token ? "You have been invited to join the client portal." : t("register.subtitle")}</p>
           </div>
 
           {success ? (
@@ -209,20 +182,11 @@ export default function Register() {
                 {loading ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <>{t("register.createAccount")} <ArrowRight className="w-4 h-4" /></>
+                  <>{token ? "Join Portal" : t("register.createAccount")} <ArrowRight className="w-4 h-4" /></>
                 )}
               </button>
             </form>
           )}
-
-          <div className="mt-6 pt-6 border-t border-zinc-200">
-            <p className="text-xs text-zinc-400 text-center">
-              {t("register.hasAccount")}{" "}
-              <Link to="/login" className="text-blue-500 hover:text-blue-600 font-medium transition-colors">
-                {t("login.signIn")}
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
     </div>

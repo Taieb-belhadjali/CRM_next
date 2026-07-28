@@ -14,60 +14,72 @@ function forbidden(msg = "Forbidden") {
 
 /** GET /api/admin/users */
 export async function GET(request) {
-  const auth = getAuthUser(request);
-  if (!auth) return unauthorized();
-  if (auth.role !== "admin") return forbidden();
+  try {
+    const auth = getAuthUser(request);
+    if (!auth) return unauthorized();
+    if (auth.role !== "admin") return forbidden();
 
-  await dbConnect();
-  const users = await User.find({}).select("-passwordHash").sort({ createdAt: -1 });
-  return withCors(Response.json({ users }));
+    await dbConnect();
+    const users = await User.find({}).select("-passwordHash").sort({ createdAt: -1 });
+    return withCors(Response.json({ users }));
+  } catch (err) {
+    console.error("GET /api/admin/users failed:", err);
+    return withCors(Response.json({ error: "Something went wrong." }, { status: 500 }));
+  }
 }
 
 /** POST /api/admin/users */
 export async function POST(request) {
-  const auth = getAuthUser(request);
-  if (!auth) return unauthorized();
-  if (auth.role !== "admin") return forbidden();
+  try {
+    const auth = getAuthUser(request);
+    if (!auth) return unauthorized();
+    if (auth.role !== "admin") return forbidden();
 
-  const { name, email, password, role } = await request.json();
+    const { name, email, password, role, account } = await request.json();
 
-  if (!name || !email || !password) {
+    if (!name || !email || !password) {
+      return withCors(
+        Response.json({ error: "name, email and password are required" }, { status: 400 })
+      );
+    }
+
+    await dbConnect();
+
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      return withCors(Response.json({ error: "Email already in use" }, { status: 409 }));
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      passwordHash,
+      role: role === "admin" ? "admin" : role === "client" ? "client" : "commercial",
+      ...(account ? { account } : {}),
+    });
+
+    logActivity({
+      auth,
+      request,
+      action: "user_create",
+      entity: "user",
+      entityId: user._id,
+      entityLabel: user.name,
+      meta: { role: user.role },
+    });
+
     return withCors(
-      Response.json({ error: "name, email and password are required" }, { status: 400 })
+      Response.json(
+        { id: user._id, name: user.name, email: user.email, role: user.role },
+        { status: 201 }
+      )
     );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Something went wrong.";
+    console.error("POST /api/admin/users failed:", message, err);
+    return withCors(Response.json({ error: message }, { status: 500 }));
   }
-
-  await dbConnect();
-
-  const existing = await User.findOne({ email: email.toLowerCase() });
-  if (existing) {
-    return withCors(Response.json({ error: "Email already in use" }, { status: 409 }));
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await User.create({
-    name,
-    email: email.toLowerCase(),
-    passwordHash,
-    role: role === "admin" ? "admin" : "commercial",
-  });
-
-  logActivity({
-    auth,
-    request,
-    action: "user_create",
-    entity: "user",
-    entityId: user._id,
-    entityLabel: user.name,
-    meta: { role: user.role },
-  });
-
-  return withCors(
-    Response.json(
-      { id: user._id, name: user.name, email: user.email, role: user.role },
-      { status: 201 }
-    )
-  );
 }
 
 export async function OPTIONS() {

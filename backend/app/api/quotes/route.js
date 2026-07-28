@@ -1,6 +1,9 @@
 import dbConnect from "@/lib/mongodb";
 import Quote from "@/models/Quote";
+import Contact from "@/models/Contact"; // must be imported to register schema for populate
+import Account from "@/models/Account"; // must be imported to register schema for populate
 import { getAuthUser } from "@/lib/auth";
+import { enforceClientAccountAccess } from "@/lib/clientAccess";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
 
@@ -24,12 +27,15 @@ export async function GET(request) {
       { title: new RegExp(search, "i") },
       { number: new RegExp(search, "i") },
     ];
+    const clientFilter = enforceClientAccountAccess(auth);
+    if (clientFilter !== null) Object.assign(filter, clientFilter);
     const [quotes, total] = await Promise.all([
       Quote.find(filter)
         .populate("contact", "firstName lastName email")
         .populate("account", "name")
         .populate("deal", "title")
         .populate("owner", "name email")
+        .populate("client", "name email")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit).limit(limit).lean(),
       Quote.countDocuments(filter),
@@ -45,7 +51,7 @@ export async function POST(request) {
     if (!auth) return unauth();
     const body = await request.json();
     const { title, status, issueDate, validUntil, deal, contact, account,
-            lineItems, notes, terms } = body;
+            lineItems, notes, terms, client } = body;
     if (!title?.trim()) return withCors(Response.json({ error: "title is required" }, { status: 400 }));
     await dbConnect();
     const quote = await Quote.create({
@@ -56,6 +62,7 @@ export async function POST(request) {
       deal: deal || undefined,
       contact: contact || undefined,
       account: account || undefined,
+      client: client || undefined,
       lineItems: Array.isArray(lineItems) ? lineItems : [],
       notes: notes?.trim(),
       terms: terms?.trim(),
@@ -66,6 +73,7 @@ export async function POST(request) {
       { path: "account", select: "name" },
       { path: "deal",    select: "title" },
       { path: "owner",   select: "name email" },
+      { path: "client",  select: "name email" },
     ]);
     logActivity({ auth, request, action: "quote_create", entity: "quote",
       entityId: quote._id, entityLabel: `${quote.number} – ${title.trim()}` });
