@@ -666,6 +666,24 @@ export function deleteMeeting(token: string, id: string) {
   return request<{ message: string }>(`/api/meetings/${id}`, { method: "DELETE" }, token);
 }
 
+export function generateMeetingLink(token: string, payload: { title: string; scheduledAt: string; durationMinutes?: number }) {
+  return request<{ meetLink: string; eventId: string; htmlLink: string }>("/api/meetings/generate-link", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, token);
+}
+
+export function getGoogleAuthUrl(token: string) {
+  return request<{ authUrl: string }>("/api/google/authorize", {}, token);
+}
+
+export function googleOAuthCallback(token: string, code: string) {
+  return request<{ ok: boolean }>(`/api/google/callback`, {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  }, token);
+}
+
 // ── Tickets ───────────────────────────────────────────────────────────────────
 
 export type TicketStatus   = "open" | "in_progress" | "resolved" | "closed";

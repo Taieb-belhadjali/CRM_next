@@ -207,7 +207,7 @@ const en: Translations = {
   pages: {
     contacts: { title: "Contacts", subtitle: "Manage your contacts", searchPlaceholder: "Search contacts…", newContact: "New contact", noContacts: "No contacts yet." },
     accounts: { title: "Accounts", subtitle: "Manage your accounts", searchPlaceholder: "Search accounts…", newAccount: "New account", noAccounts: "No accounts yet." },
-    prospects: { title: "Prospects", subtitle: "Manage your prospects", searchPlaceholder: "Search prospects…", newProspect: "New prospect", noProspects: "No prospects yet.", reference: "Reference" },
+    prospects: { title: "Prospects", subtitle: "Manage your prospects", searchPlaceholder: "Search prospects…", newProspect: "New prospect", noProspects: "No prospects yet.", reference: "Reference", downloadTemplate: "Download template" },
     deals: { title: "Deals", subtitle: "Manage your deals", searchPlaceholder: "Search deals…", newDeal: "New deal", noDeals: "No deals yet.", kanban: "Kanban", list: "List" },
     tasks: { title: "Tasks", subtitle: "Manage your tasks", searchPlaceholder: "Search tasks…", newTask: "New task", noTasks: "No tasks yet." },
     calls: { title: "Calls", subtitle: "Call history", searchPlaceholder: "Search calls…", newCall: "Log call", noCalls: "No calls yet." },
@@ -572,7 +572,7 @@ const fr: Translations = {
   pages: {
     contacts: { title: "Contacts", subtitle: "Gérez vos contacts", searchPlaceholder: "Rechercher un contact…", newContact: "Nouveau contact", noContacts: "Aucun contact." },
     accounts: { title: "Comptes", subtitle: "Gérez vos comptes", searchPlaceholder: "Rechercher un compte…", newAccount: "Nouveau compte", noAccounts: "Aucun compte." },
-    prospects: { title: "Prospects", subtitle: "Gérez vos prospects", searchPlaceholder: "Rechercher un prospect…", newProspect: "Nouveau prospect", noProspects: "Aucun prospect.", reference: "Référence" },
+    prospects: { title: "Prospects", subtitle: "Gérez vos prospects", searchPlaceholder: "Rechercher un prospect…", newProspect: "Nouveau prospect", noProspects: "Aucun prospect.", reference: "Référence", downloadTemplate: "Télécharger le modèle" },
     deals: { title: "Affaires", subtitle: "Gérez vos affaires", searchPlaceholder: "Rechercher une affaire…", newDeal: "Nouvelle affaire", noDeals: "Aucune affaire.", kanban: "Kanban", list: "Liste" },
     tasks: { title: "Tâches", subtitle: "Gérez vos tâches", searchPlaceholder: "Rechercher une tâche…", newTask: "Nouvelle tâche", noTasks: "Aucune tâche." },
     calls: { title: "Appels", subtitle: "Historique des appels", searchPlaceholder: "Rechercher un appel…", newCall: "Nouvel appel", noCalls: "Aucun appel." },

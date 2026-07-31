@@ -28,6 +28,7 @@ import PortalDeals from "./pages/PortalDeals";
 import PortalQuotes from "./pages/PortalQuotes";
 import PortalInvoices from "./pages/PortalInvoices";
 import PortalTickets from "./pages/PortalTickets";
+import GoogleCallback from "./pages/GoogleCallback";
 import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
 import { ClientRoute } from "./components/ClientRoute";
 
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
   // Public
   { path: "/login",    Component: Login },
   { path: "/register", Component: Register },
+  { path: "/auth/google/callback", Component: GoogleCallback },
 
   // Client Portal
   {

@@ -403,9 +403,17 @@ export default function Prospects() {
         a.href = URL.createObjectURL(blob);
         a.download = `prospects-${Date.now()}.csv`;
         a.click();
-        URL.revokeObjectURL(a.href);
-      })
-      .catch(() => setError(t("errors.saveFailed")));
+      });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = ["firstName", "lastName", "company", "jobTitle", "email", "phone", "address", "source", "status", "tags"];
+    const csv = [headers.join(",")];
+    const blob = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `prospects-template-${Date.now()}.csv`;
+    a.click();
   };
 
   return (
@@ -432,6 +440,9 @@ export default function Prospects() {
           </button>
           <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors">
             <Download className="w-3.5 h-3.5" strokeWidth={1.75} /> Export
+          </button>
+          <button onClick={handleDownloadTemplate} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors">
+            <Download className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("pages.prospects.downloadTemplate")}
           </button>
           <button onClick={() => setEditing("new")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
             <Plus className="w-4 h-4" strokeWidth={1.75} /> {t("pages.prospects.newProspect")}

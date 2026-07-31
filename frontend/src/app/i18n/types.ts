@@ -168,7 +168,7 @@ export interface Translations {
   pages: {
     contacts: { title: string; subtitle: string; searchPlaceholder: string; newContact: string; noContacts: string };
     accounts: { title: string; subtitle: string; searchPlaceholder: string; newAccount: string; noAccounts: string };
-    prospects: { title: string; subtitle: string; searchPlaceholder: string; newProspect: string; noProspects: string; reference: string };
+    prospects: { title: string; subtitle: string; searchPlaceholder: string; newProspect: string; noProspects: string; reference: string; downloadTemplate: string };
     deals: { title: string; subtitle: string; searchPlaceholder: string; newDeal: string; noDeals: string; kanban: string; list: string };
     tasks: { title: string; subtitle: string; searchPlaceholder: string; newTask: string; noTasks: string };
     calls: { title: string; subtitle: string; searchPlaceholder: string; newCall: string; noCalls: string };

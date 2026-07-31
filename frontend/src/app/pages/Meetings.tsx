@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Video, Users, Link, CalendarDays } from "lucide-react";
-import { listMeetings, createMeeting, updateMeeting, deleteMeeting, listUsersPublic, type Meeting, type MeetingPayload, type AdminUser } from "../api";
+import { listMeetings, createMeeting, updateMeeting, deleteMeeting, listUsersPublic, generateMeetingLink, getGoogleAuthUrl, type Meeting, type MeetingPayload, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -24,10 +24,46 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
   });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+  const [generatingLink, setGeneratingLink] = useState(false);
 
   const set = (k: keyof MeetingPayload) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  const handleGenerateMeetLink = async () => {
+    if (!form.title?.trim() || !form.scheduledAt) {
+      setError("Title and scheduled time are required to generate a Meet link.");
+      return;
+    }
+    setError("");
+    setGeneratingLink(true);
+    try {
+      const res = await generateMeetingLink(token, { title: form.title, scheduledAt: form.scheduledAt, durationMinutes: form.durationMinutes });
+      const meetLink = (res as { meetLink?: string }).meetLink;
+      if (!meetLink) {
+        setError("Google Meet link was not returned. Check calendar permissions or service account setup.");
+        return;
+      }
+      setForm((p) => ({ ...p, meetingLink: meetLink }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to generate meeting link.";
+      if (message.toLowerCase().includes("google calendar not connected")) {
+        try {
+          const auth = await getGoogleAuthUrl(token);
+          const authUrl = (auth as { authUrl?: string }).authUrl;
+          if (!authUrl) throw new Error("Missing authorization URL");
+          window.location.href = authUrl;
+          return;
+        } catch (oauthErr) {
+          setError(oauthErr instanceof Error ? oauthErr.message : "Failed to start Google authorization.");
+        }
+      } else {
+        setError(message);
+      }
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
 
   const toggleParticipant = (id: string) =>
     setForm((p) => ({
@@ -67,7 +103,12 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
         <input className={inputCls} value={form.location ?? ""} onChange={set("location")} placeholder="Conference room B / Paris" />
       </FormField>
       <FormField label="Meeting link">
-        <input className={inputCls} type="url" value={form.meetingLink ?? ""} onChange={set("meetingLink")} placeholder="https://meet.google.com/…" />
+        <div className="flex gap-2">
+          <input className={inputCls} type="url" value={form.meetingLink ?? ""} onChange={set("meetingLink")} placeholder="https://meet.google.com/…" />
+          <button type="button" onClick={handleGenerateMeetLink} disabled={generatingLink} className="whitespace-nowrap px-3 py-2 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-60 rounded-lg transition-colors">
+            {generatingLink ? "Generating…" : "Generate Google Meet"}
+          </button>
+        </div>
       </FormField>
       <FormField label={t("forms.notes")}>
         <textarea className={inputCls} rows={3} value={form.notes ?? ""} onChange={set("notes")} placeholder="Agenda, objectives…" />

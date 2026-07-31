@@ -608,9 +608,9 @@ function RoleSelect({ value, onChange, t }: { value: "commercial" | "admin" | "c
         onChange={(e) => onChange(e.target.value as "commercial" | "admin" | "client")}
         className="w-full appearance-none px-3 py-2.5 text-sm bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors"
       >
-        <option value="commercial">{t("commercialRole")}</option>
-        <option value="admin">{t("adminRole")}</option>
-        <option value="client">{t("clientRole")}</option>
+        <option value="commercial">{t("commercial")}</option>
+        <option value="admin">{t("admin")}</option>
+        <option value="client">{t("client")}</option>
       </select>
     </div>
   );
