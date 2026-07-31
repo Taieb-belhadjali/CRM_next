@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Task from "@/models/Task";
+import CalendarEvent from "@/models/CalendarEvent";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 import { logActivity } from "@/lib/activity";
@@ -56,9 +57,35 @@ export async function POST(request) {
       relatedTo: relatedTo || undefined,
       relatedToModel: relatedToModel || undefined,
     });
+
+    let calendarEventId = task.calendarEventId;
+    if (task.dueDate && task.assignee && !calendarEventId) {
+      try {
+        const calEvent = await CalendarEvent.create({
+          title: task.title,
+          description: task.description,
+          type: "task",
+          startAt: task.dueDate,
+          allDay: true,
+          status: "scheduled",
+          owner: auth.sub,
+          visibility: task.assignee.toString() === auth.sub.toString() ? "private" : "team",
+          sharedWith: task.assignee.toString() === auth.sub.toString() ? [] : [task.assignee],
+          relatedTo: task._id,
+          relatedToModel: "Task",
+        });
+        calendarEventId = calEvent._id;
+        await Task.findByIdAndUpdate(task._id, { calendarEventId: calEvent._id });
+      } catch (e) {
+        console.error("[calendar] Failed to create calendar event for task:", e.message);
+      }
+    }
+
     const populated = await task.populate("assignee", "name email");
     logActivity({ auth, request, action: "task_create", entity: "task", entityId: task._id, entityLabel: title.trim() });
-    return withCors(Response.json({ task: populated }, { status: 201 }));
+    const taskObj = populated.toObject ? populated.toObject() : populated;
+    if (calendarEventId) taskObj.calendarEventId = calendarEventId;
+    return withCors(Response.json({ task: taskObj }, { status: 201 }));
   } catch (e) { console.error(e); return withCors(Response.json({ error: "Something went wrong." }, { status: 500 })); }
 }
 

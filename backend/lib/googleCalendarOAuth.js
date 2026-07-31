@@ -54,8 +54,8 @@ export async function createGoogleMeetEventWithTokens({ accessToken, refreshToke
   const event = {
     summary,
     description,
-    start: { dateTime: start },
-    end: { dateTime: end },
+    start: { dateTime: new Date(start).toISOString() },
+    end: { dateTime: new Date(end).toISOString() },
     conferenceData: {
       createRequest: { requestId: `meet-${Date.now()}` },
     },
@@ -72,6 +72,37 @@ export async function createGoogleMeetEventWithTokens({ accessToken, refreshToke
 
   return {
     meetLink,
+    eventId: response.data.id,
+    htmlLink: response.data.htmlLink,
+  };
+}
+
+export async function createGoogleCalendarEventWithTokens({ accessToken, refreshToken, expiresAt }, { summary, description, start, end, allDay = false }) {
+  const auth = getOAuthClient(accessToken, refreshToken, expiresAt);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const event = {
+    summary,
+    description,
+  };
+
+  if (allDay) {
+    const startDate = new Date(start);
+    const endDate = new Date(end || start);
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    event.start = { date: fmt(startDate) };
+    event.end = { date: fmt(endDate) };
+  } else {
+    event.start = { dateTime: new Date(start).toISOString() };
+    event.end = { dateTime: new Date(end).toISOString() };
+  }
+
+  const response = await calendar.events.insert({
+    calendarId: GOOGLE_CALENDAR_ID || "primary",
+    requestBody: event,
+  });
+
+  return {
     eventId: response.data.id,
     htmlLink: response.data.htmlLink,
   };

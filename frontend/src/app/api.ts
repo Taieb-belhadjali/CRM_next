@@ -1095,7 +1095,100 @@ export function deleteSavedSearch(token: string, id: string) {
   return request<{ message: string }>(`/api/saved-searches/${id}`, { method: "DELETE" }, token);
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Calendar Events ──────────────────────────────────────────────────────────────
+
+export type CalendarEventType = "task" | "meeting" | "call" | "reminder" | "custom";
+export type CalendarEventStatus = "scheduled" | "completed" | "cancelled";
+export type CalendarEventVisibility = "private" | "team" | "shared";
+
+export interface CalendarEvent {
+  _id: string;
+  title: string;
+  description?: string;
+  type: CalendarEventType;
+  startAt: string;
+  endAt?: string;
+  allDay: boolean;
+  location?: string;
+  meetingLink?: string;
+  notes?: string;
+  status: CalendarEventStatus;
+  owner: OwnerRef;
+  visibility: CalendarEventVisibility;
+  sharedWith: OwnerRef[];
+  relatedTo?: string | null;
+  relatedToModel?: string | null;
+  reminderMinutes: number;
+  remindAt: string;
+  reminderSent: boolean;
+  googleEventId?: string;
+  googleCalendarId?: string;
+  googleSyncedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarEventPayload {
+  title: string;
+  description?: string;
+  type?: CalendarEventType;
+  startAt: string;
+  endAt?: string;
+  allDay?: boolean;
+  location?: string;
+  meetingLink?: string;
+  notes?: string;
+  status?: CalendarEventStatus;
+  visibility?: CalendarEventVisibility;
+  sharedWith?: string[];
+  relatedTo?: string | null;
+  relatedToModel?: string | null;
+  reminderMinutes?: number;
+  googleEventId?: string;
+  googleCalendarId?: string;
+  googleSyncedAt?: string;
+  reminderSent?: boolean;
+}
+
+export function listCalendarEvents(token: string, params: { from?: string; to?: string; type?: string; page?: number; limit?: number } = {}) {
+  const q = new URLSearchParams();
+  if (params.from) q.set("from", params.from);
+  if (params.to) q.set("to", params.to);
+  if (params.type) q.set("type", params.type);
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  return request<{ events: CalendarEvent[]; total: number; page: number; limit: number }>(`/api/calendar-events?${q}`, {}, token);
+}
+
+export function createCalendarEvent(token: string, payload: CalendarEventPayload) {
+  return request<{ event: CalendarEvent }>("/api/calendar-events", { method: "POST", body: JSON.stringify(payload) }, token);
+}
+
+export function getCalendarEvent(token: string, id: string) {
+  return request<{ event: CalendarEvent }>(`/api/calendar-events/${id}`, {}, token);
+}
+
+export function updateCalendarEvent(token: string, id: string, payload: Partial<CalendarEventPayload>) {
+  return request<{ event: CalendarEvent }>(`/api/calendar-events/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token);
+}
+
+export function deleteCalendarEvent(token: string, id: string) {
+  return request<{ message: string }>(`/api/calendar-events/${id}`, { method: "DELETE" }, token);
+}
+
+export function listCalendarEventAlerts(token: string) {
+  return request<{ alerts: Array<{ _id: string; title: string; startAt?: string; remindAt?: string; type?: string }> }>("/api/calendar-events/alerts", {}, token);
+}
+
+export function syncCalendarEvent(token: string, id: string) {
+  return request<{ event: CalendarEvent; google: { eventId: string; htmlLink: string; hangoutLink: string | null } }>(
+    `/api/calendar-events/${id}/sync`,
+    { method: "POST" },
+    token
+  );
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────────
 
 export interface DashboardKpis {
   openDeals: number;

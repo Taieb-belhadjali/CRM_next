@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed } from "lucide-react";
-import { listCalls, createCall, updateCall, deleteCall, type Call, type CallPayload, type CallStatus, type CallDirection } from "../api";
+import { Plus, Pencil, Trash2, Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, RefreshCw } from "lucide-react";
+import { listCalls, createCall, updateCall, deleteCall, syncCalendarEvent, getGoogleAuthUrl, type Call, type CallPayload, type CallStatus, type CallDirection } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -33,7 +33,7 @@ function StatusBadge({ status }: { status: CallStatus }) {
 
 // ── Form ──────────────────────────────────────────────────────────────────────
 
-function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null; onSave: (c: Call) => void; onCancel: () => void; token: string }) {
+function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null; onSave: (result: { call: Call; calendarEventId?: string }) => void; onCancel: () => void; token: string }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<CallPayload>({
     subject:         initial?.subject         ?? "",
@@ -57,7 +57,7 @@ function CallForm({ initial, onSave, onCancel, token }: { initial?: Call | null;
     try {
       const payload = { ...form, durationMinutes: Number(form.durationMinutes) || 0, scheduledAt: form.scheduledAt || null };
       const res = initial ? await updateCall(token, initial._id, payload) : await createCall(token, payload);
-      onSave(res.call);
+      onSave(res);
     } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong."); }
     finally { setLoading(false); }
   };
@@ -120,6 +120,7 @@ export default function Calls() {
   const [editing, setEditing] = useState<Call | null | "new">(null);
   const [deleting, setDeleting]           = useState<Call | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [syncingIds, setSyncingIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => { setPage(1); }, [search, statusFilter, directionFilter]);
 
@@ -132,12 +133,14 @@ export default function Calls() {
       .finally(() => setLoading(false));
   }, [token, page, statusFilter, directionFilter]);
 
-  const handleSaved = (c: Call) => {
+  const handleSaved = (result: { call: Call; calendarEventId?: string }) => {
+    const c = result.call;
+    const merged = { ...c, calendarEventId: result.calendarEventId ?? (c as any).calendarEventId };
     setCalls((prev) => {
       const idx = prev.findIndex((x) => x._id === c._id);
-      if (idx >= 0) return prev.map((x) => (x._id === c._id ? c : x));
+      if (idx >= 0) return prev.map((x) => (x._id === c._id ? merged : x));
       setTotal((n) => n + 1);
-      return [c, ...prev];
+      return [merged, ...prev];
     });
     setEditing(null);
   };
@@ -152,6 +155,28 @@ export default function Calls() {
       setDeleting(null);
     } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
     finally { setDeleteLoading(false); }
+  };
+
+  const handleSyncToGoogle = async (c: Call) => {
+    if (!token || !(c as any).calendarEventId) return;
+    setSyncingIds((p) => ({ ...p, [c._id]: true }));
+    setError("");
+    try {
+      const res = await syncCalendarEvent(token, (c as any).calendarEventId as string);
+      const link = (res as any)?.event?.googleCalendarId as string | undefined;
+      if (link) window.open(link, "_blank");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Sync failed.";
+      setError(message);
+      if (message.toLowerCase().includes("google calendar not connected")) {
+        getGoogleAuthUrl(token).then((r) => {
+          const url = (r as { authUrl?: string }).authUrl;
+          if (url) window.location.href = url;
+        }).catch(() => {});
+      }
+    } finally {
+      setSyncingIds((p) => ({ ...p, [c._id]: false }));
+    }
   };
 
   return (
@@ -219,6 +244,11 @@ export default function Calls() {
                   <td className="px-5 py-3.5 text-zinc-500 hidden lg:table-cell">{c.durationMinutes ? `${c.durationMinutes} min` : "—"}</td>
                   <td className="px-5 py-3.5 text-zinc-500 hidden lg:table-cell">{c.scheduledAt ? new Date(c.scheduledAt).toLocaleString() : "—"}</td>
                   <td className="px-5 py-3.5 text-right">
+                    {(c as any).calendarEventId && (
+                      <button onClick={() => handleSyncToGoogle(c)} disabled={syncingIds[c._id]} title="Sync to Google Calendar" className="p-1.5 rounded-lg hover:bg-blue-50 text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50">
+                        <RefreshCw className={`w-3.5 h-3.5 ${syncingIds[c._id] ? "animate-spin" : ""}`} strokeWidth={1.75} />
+                      </button>
+                    )}
                     <button onClick={() => setEditing(c)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"><Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
                     <button onClick={() => setDeleting(c)} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors ml-1"><Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
                   </td>

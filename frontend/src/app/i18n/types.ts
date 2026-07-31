@@ -181,6 +181,7 @@ export interface Translations {
     deliveries: { title: string; subtitle: string; searchPlaceholder: string; newDelivery: string; noDeliveries: string; allStatuses: string; editDelivery: string; detailSubtitle: string; deliveryTitle: string; order: string; deliveredOn: string; transitionShip: string; transitionDelivered: string; transitionReopen: string; createDelivery: string; deliverySingular: string; deliveryPlural: string; reference: string; deliveryColumn: string };
     activityLog: { title: string; subtitle: string; searchPlaceholder: string };
     userManagement: { title: string; subtitle: string; inviteUser: string; createAccount: string; fullName: string; emailAddress: string; temporaryPassword: string; sectionsAdmin: string; sectionsCommercial: string; teamMembers: string; you: string; editUser: string; deactivate: string; activate: string; statusActive: string; statusInactive: string; makeCommercial: string; makeAdmin: string; deleteUser: string; confirmDeleteTitle: string; permanentlyRemoved: string; fieldStatus: string; passwordMinLength: string; allFieldsRequired: string; nameAndEmailRequired: string; editing: string; failedToggleUser: string; failedToggleRole: string; failedDeleteUser: string; fetchFailed: string };
+    calendar: { title: string; subtitle: string; newEvent: string; noEvents: string; noAlerts: string; alerts: string };
   };
   login: {
     title: string;

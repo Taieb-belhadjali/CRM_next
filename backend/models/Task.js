@@ -36,6 +36,7 @@ const TaskSchema = new mongoose.Schema(
       type: String,
       enum: ["Prospect", "Contact", "Account", "Deal"],
     },
+    calendarEventId: { type: mongoose.Schema.Types.ObjectId, ref: "CalendarEvent" },
   },
   { timestamps: true }
 );

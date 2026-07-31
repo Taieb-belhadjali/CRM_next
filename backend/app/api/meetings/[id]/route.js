@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Meeting from "@/models/Meeting";
+import CalendarEvent from "@/models/CalendarEvent";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 
@@ -30,8 +31,12 @@ export async function DELETE(request, { params }) {
   if (!auth) return unauth();
   const { id } = await params;
   await dbConnect();
-  const meeting = await Meeting.findByIdAndDelete(id);
+  const meeting = await Meeting.findById(id);
   if (!meeting) return withCors(Response.json({ error: "Meeting not found" }, { status: 404 }));
+  if (meeting.calendarEventId) {
+    await CalendarEvent.findByIdAndDelete(meeting.calendarEventId);
+  }
+  await Meeting.findByIdAndDelete(id);
   logActivity({ auth, request, action: "meeting_delete", entity: "meeting", entityId: id, entityLabel: meeting.title });
   return withCors(Response.json({ message: "Deleted." }));
 }

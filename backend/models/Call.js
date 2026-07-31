@@ -12,6 +12,7 @@ const CallSchema = new mongoose.Schema(
     relatedTo: { type: mongoose.Schema.Types.ObjectId },
     relatedToModel: { type: String, enum: ["Contact", "Prospect", "Deal"] },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    calendarEventId: { type: mongoose.Schema.Types.ObjectId, ref: "CalendarEvent" },
   },
   { timestamps: true }
 );

@@ -14,9 +14,11 @@ const MeetingSchema = new mongoose.Schema(
     relatedTo: { type: mongoose.Schema.Types.ObjectId },
     relatedToModel: { type: String, enum: ["Contact", "Prospect", "Deal", "Account"] },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    calendarEventId: { type: mongoose.Schema.Types.ObjectId, ref: "CalendarEvent" },
   },
   { timestamps: true }
 );
 
 MeetingSchema.index({ scheduledAt: 1 });
+
 export default mongoose.models.Meeting || mongoose.model("Meeting", MeetingSchema);

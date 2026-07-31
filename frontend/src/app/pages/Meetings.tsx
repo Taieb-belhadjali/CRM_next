@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Trash2, Video, Users, Link, CalendarDays } from "lucide-react";
-import { listMeetings, createMeeting, updateMeeting, deleteMeeting, listUsersPublic, generateMeetingLink, getGoogleAuthUrl, type Meeting, type MeetingPayload, type AdminUser } from "../api";
+import { Plus, Pencil, Trash2, Video, Users, Link, CalendarDays, RefreshCw, ExternalLink } from "lucide-react";
+import { listMeetings, createMeeting, updateMeeting, deleteMeeting, syncCalendarEvent, getGoogleAuthUrl, listUsersPublic, generateMeetingLink, type Meeting, type MeetingPayload, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -11,7 +11,7 @@ import { FormField, inputCls, selectCls } from "../components/shared/FormField";
 
 const LIMIT = 25;
 
-function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Meeting | null; users: AdminUser[]; onSave: (m: Meeting) => void; onCancel: () => void; token: string }) {
+function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Meeting | null; users: AdminUser[]; onSave: (result: { meeting: Meeting; calendarEventId?: string }) => void; onCancel: () => void; token: string }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<MeetingPayload>({
     title:           initial?.title ?? "",
@@ -80,7 +80,7 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
     try {
       const payload = { ...form, durationMinutes: Number(form.durationMinutes) || 60 };
       const res = initial ? await updateMeeting(token, initial._id, payload) : await createMeeting(token, payload);
-      onSave(res.meeting);
+      onSave(res);
     } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong."); }
     finally { setLoading(false); }
   };
@@ -139,7 +139,30 @@ function MeetingForm({ initial, users, onSave, onCancel, token }: { initial?: Me
 
 function MeetingDetail({ meeting, onEdit, onDelete }: { meeting: Meeting; onEdit: () => void; onDelete: () => void }) {
   const { t } = useLanguage();
+  const { token } = useAuth();
+  const [syncing, setSyncing] = useState(false);
   const participants = (meeting.participants ?? []) as { name: string; email: string }[];
+  const calEventId = (meeting as any).calendarEventId as string | undefined;
+
+  const handleSyncToGoogle = async () => {
+    if (!token || !calEventId) return;
+    setSyncing(true);
+    try {
+      const res = await syncCalendarEvent(token, calEventId);
+      const link = (res as any)?.event?.googleCalendarId as string | undefined;
+      if (link) window.open(link, "_blank");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Sync failed.";
+      if (message.toLowerCase().includes("google calendar not connected")) {
+        getGoogleAuthUrl(token).then((r) => {
+          const url = (r as { authUrl?: string }).authUrl;
+          if (url) window.location.href = url;
+        }).catch(() => {});
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
   return (
     <div className="space-y-4">
       <div className="pb-4 border-b border-zinc-100">
@@ -178,6 +201,12 @@ function MeetingDetail({ meeting, onEdit, onDelete }: { meeting: Meeting; onEdit
         </div>
       )}
       <div className="flex gap-2 pt-2">
+        {calEventId && (
+          <button onClick={handleSyncToGoogle} disabled={syncing} className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50">
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} strokeWidth={1.75} />
+            {syncing ? "Syncing..." : "Sync to Google Calendar"}
+          </button>
+        )}
         <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
           <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /> {t("common.edit")}
         </button>
@@ -219,15 +248,17 @@ export default function Meetings() {
       .finally(() => setLoading(false));
   }, [token, page]);
 
-  const handleSaved = (m: Meeting) => {
+  const handleSaved = (result: { meeting: Meeting; calendarEventId?: string }) => {
+    const m = result.meeting;
+    const merged = { ...m, calendarEventId: result.calendarEventId ?? (m as any).calendarEventId };
     setMeetings((prev) => {
       const idx = prev.findIndex((x) => x._id === m._id);
-      if (idx >= 0) return prev.map((x) => (x._id === m._id ? m : x));
+      if (idx >= 0) return prev.map((x) => (x._id === m._id ? merged : x));
       setTotal((n) => n + 1);
-      return [m, ...prev];
+      return [merged, ...prev];
     });
     setEditing(null);
-    setSelected(m);
+    setSelected(merged);
   };
 
   const handleDelete = async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, CheckCircle2, Circle, Pencil, Trash2, Clock, CheckSquare } from "lucide-react";
-import { listTasks, createTask, updateTask, deleteTask, listUsersPublic, type Task, type TaskPayload, type TaskPriority, type TaskStatus, type AdminUser } from "../api";
+import { Plus, CheckCircle2, Circle, Pencil, Trash2, Clock, CheckSquare, RefreshCw } from "lucide-react";
+import { listTasks, createTask, updateTask, deleteTask, syncCalendarEvent, getGoogleAuthUrl, listUsersPublic, type Task, type TaskPayload, type TaskPriority, type TaskStatus, type AdminUser } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../context/LanguageContext";
 import { SlideOver } from "../components/shared/SlideOver";
@@ -22,7 +22,7 @@ const PRIORITY_OPTIONS: TaskPriority[] = ["high", "medium", "low"];
 
 // ── Form ──────────────────────────────────────────────────────────────
 
-function TaskForm({ initial, users, onSave, onCancel, token }: { initial?: Task | null; users: AdminUser[]; onSave: (t: Task) => void; onCancel: () => void; token: string }) {
+function TaskForm({ initial, users, onSave, onCancel, token }: { initial?: Task | null; users: AdminUser[]; onSave: (result: { task: Task; calendarEventId?: string }) => void; onCancel: () => void; token: string }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<TaskPayload>({
     title:       initial?.title       ?? "",
@@ -45,7 +45,7 @@ function TaskForm({ initial, users, onSave, onCancel, token }: { initial?: Task 
     try {
       const payload = { ...form, assignee: form.assignee || null, dueDate: form.dueDate || null };
       const res = initial ? await updateTask(token, initial._id, payload) : await createTask(token, payload);
-      onSave(res.task);
+      onSave(res);
     } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong."); }
     finally { setLoading(false); }
   };
@@ -108,6 +108,7 @@ export default function Tasks() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const usersLoaded = useRef(false);
+  const [syncingIds, setSyncingIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!token || usersLoaded.current) return;
@@ -135,12 +136,14 @@ export default function Tasks() {
     } catch (e) { setError(e instanceof Error ? e.message : "Update failed."); }
   };
 
-  const handleSaved = (t: Task) => {
+  const handleSaved = (result: { task: Task; calendarEventId?: string }) => {
+    const t = result.task;
+    const merged = { ...t, calendarEventId: result.calendarEventId ?? (t as any).calendarEventId };
     setTasks((prev) => {
       const idx = prev.findIndex((x) => x._id === t._id);
-      if (idx >= 0) return prev.map((x) => (x._id === t._id ? t : x));
+      if (idx >= 0) return prev.map((x) => (x._id === t._id ? merged : x));
       setTotal((n) => n + 1);
-      return [t, ...prev];
+      return [merged, ...prev];
     });
     setEditing(null);
   };
@@ -155,6 +158,28 @@ export default function Tasks() {
       setDeleting(null);
     } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
     finally { setDeleteLoading(false); }
+  };
+
+  const handleSyncToGoogle = async (t: Task) => {
+    if (!token || !(t as any).calendarEventId) return;
+    setSyncingIds((p) => ({ ...p, [t._id]: true }));
+    setError("");
+    try {
+      const res = await syncCalendarEvent(token, (t as any).calendarEventId as string);
+      const link = (res as any)?.event?.googleCalendarId as string | undefined;
+      if (link) window.open(link, "_blank");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Sync failed.";
+      setError(message);
+      if (message.toLowerCase().includes("google calendar not connected")) {
+        getGoogleAuthUrl(token).then((r) => {
+          const url = (r as { authUrl?: string }).authUrl;
+          if (url) window.location.href = url;
+        }).catch(() => {});
+      }
+    } finally {
+      setSyncingIds((p) => ({ ...p, [t._id]: false }));
+    }
   };
 
   const isOverdue = (t: Task) => t.dueDate && t.status !== "done" && new Date(t.dueDate) < new Date();
@@ -218,6 +243,11 @@ export default function Tasks() {
                   </div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
+                  {(t as any).calendarEventId && (
+                    <button onClick={() => handleSyncToGoogle(t)} disabled={syncingIds[t._id]} title="Sync to Google Calendar" className="p-1.5 rounded-lg hover:bg-blue-50 text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50">
+                      <RefreshCw className={`w-3.5 h-3.5 ${syncingIds[t._id] ? "animate-spin" : ""}`} strokeWidth={1.75} />
+                    </button>
+                  )}
                   <button onClick={() => setEditing(t)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"><Pencil className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
                   <button onClick={() => setDeleting(t)} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} /></button>
                 </div>

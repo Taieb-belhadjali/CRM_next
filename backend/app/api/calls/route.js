@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Call from "@/models/Call";
+import CalendarEvent from "@/models/CalendarEvent";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 
@@ -45,9 +46,38 @@ export async function POST(request) {
       relatedTo: relatedTo || undefined, relatedToModel: relatedToModel || undefined,
       owner: auth.sub,
     });
+
+    let calendarEventId = call.calendarEventId;
+    if (call.scheduledAt && call.owner && !calendarEventId) {
+      try {
+        const endDate = call.durationMinutes
+          ? new Date(new Date(call.scheduledAt).getTime() + call.durationMinutes * 60 * 1000)
+          : new Date(new Date(call.scheduledAt).getTime() + 60 * 60 * 1000);
+        const calEvent = await CalendarEvent.create({
+          title: call.subject,
+          description: call.notes,
+          type: "call",
+          startAt: call.scheduledAt,
+          endAt: endDate,
+          allDay: false,
+          status: call.status === "scheduled" ? "scheduled" : "completed",
+          owner: call.owner,
+          visibility: "team",
+          relatedTo: call._id,
+          relatedToModel: "Call",
+        });
+        calendarEventId = calEvent._id;
+        await Call.findByIdAndUpdate(call._id, { calendarEventId: calEvent._id });
+      } catch (e) {
+        console.error("[calendar] Failed to create calendar event for call:", e.message);
+      }
+    }
+
     const populated = await call.populate("owner", "name email");
     logActivity({ auth, request, action: "call_create", entity: "call", entityId: call._id, entityLabel: subject.trim() });
-    return withCors(Response.json({ call: populated }, { status: 201 }));
+    const callObj = populated.toObject ? populated.toObject() : populated;
+    if (calendarEventId) callObj.calendarEventId = calendarEventId;
+    return withCors(Response.json({ call: callObj }, { status: 201 }));
   } catch (e) { console.error(e); return withCors(Response.json({ error: "Something went wrong." }, { status: 500 })); }
 }
 

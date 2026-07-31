@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import { useLanguage } from "./context/LanguageContext";
+import { listCalendarEventAlerts } from "./api";
 
 const NAV_ITEMS = [
   { to: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, end: true },
@@ -223,14 +224,53 @@ function SidebarContent({
 export default function Layout() {
   const [searchValue, setSearchValue] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [alerts, setAlerts] = useState<{ _id: string; title: string; startAt?: string; remindAt?: string; type?: string }[]>([]);
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { t } = useLanguage();
 
-  // Close drawer on route change
+  // Close dropdown on route change
   useEffect(() => {
-    setDrawerOpen(false);
+    setAlertsOpen(false);
   }, [location.pathname]);
+
+  // Fetch calendar alerts
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    (async () => {
+      try {
+        const res = await listCalendarEventAlerts(token);
+        if (active) setAlerts(res.alerts?.map((a) => ({
+          _id: a._id,
+          title: a.title,
+          startAt: a.startAt,
+          remindAt: a.remindAt,
+          type: a.type,
+        })) || []);
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, [token]);
+
+  // Poll alerts every 60s
+  useEffect(() => {
+    if (!token) return;
+    const id = setInterval(async () => {
+      try {
+        const res = await listCalendarEventAlerts(token);
+        setAlerts(res.alerts?.map((a) => ({
+          _id: a._id,
+          title: a.title,
+          startAt: a.startAt,
+          remindAt: a.remindAt,
+          type: a.type,
+        })) || []);
+      } catch {}
+    }, 60000);
+    return () => clearInterval(id);
+  }, [token]);
 
   // Lock body scroll while drawer is open
   useEffect(() => {
@@ -314,10 +354,52 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-3 ml-auto">
-            <button className="relative p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-zinc-700 transition-colors">
-              <Bell className="w-4 h-4" strokeWidth={1.75} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setAlertsOpen((v) => !v)}
+                className="relative p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-zinc-700 transition-colors"
+                aria-label="Alerts"
+              >
+                <Bell className="w-4 h-4" strokeWidth={1.75} />
+                {alerts.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+                )}
+              </button>
+              {alertsOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-zinc-100">
+                    <p className="text-xs font-semibold text-zinc-900">Upcoming Alerts</p>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {alerts.length === 0 ? (
+                      <p className="p-4 text-xs text-zinc-400 text-center">No upcoming reminders.</p>
+                    ) : (
+                      alerts.map((a) => (
+                        <div key={a._id} className="px-4 py-3 border-b border-zinc-50 last:border-b-0 hover:bg-zinc-50">
+                          <div className="flex items-start gap-2">
+                            <Bell className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-zinc-700 leading-snug truncate">{a.title}</p>
+                              <p className="text-[10px] text-zinc-400 mt-0.5">
+                                {a.remindAt ? `Due ${new Date(a.remindAt).toLocaleString()}` : a.startAt ? `Starts ${new Date(a.startAt).toLocaleString()}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="px-4 py-2 border-t border-zinc-100 bg-zinc-50">
+                    <button
+                      onClick={() => setAlertsOpen(false)}
+                      className="text-xs text-zinc-500 hover:text-zinc-700 font-medium"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
               {initials}
             </div>

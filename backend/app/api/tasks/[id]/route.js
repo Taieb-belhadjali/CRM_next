@@ -39,8 +39,12 @@ export async function DELETE(request, { params }) {
     if (!auth) return unauth();
     const { id } = await params;
     await dbConnect();
-    const task = await Task.findByIdAndDelete(id);
+    const task = await Task.findById(id);
     if (!task) return withCors(Response.json({ error: "Task not found" }, { status: 404 }));
+    if (task.calendarEventId) {
+      await CalendarEvent.findByIdAndDelete(task.calendarEventId);
+    }
+    await Task.findByIdAndDelete(id);
     logActivity({ auth, request, action: "task_delete", entity: "task", entityId: id, entityLabel: task.title });
     return withCors(Response.json({ message: "Deleted." }));
   } catch (e) { console.error(e); return withCors(Response.json({ error: "Something went wrong." }, { status: 500 })); }

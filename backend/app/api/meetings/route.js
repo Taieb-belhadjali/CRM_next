@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Meeting from "@/models/Meeting";
+import CalendarEvent from "@/models/CalendarEvent";
 import { getAuthUser } from "@/lib/auth";
 import { withCors, handlePreflight } from "@/lib/cors";
 
@@ -46,9 +47,36 @@ export async function POST(request) {
       relatedTo: relatedTo || undefined, relatedToModel: relatedToModel || undefined,
       owner: auth.sub,
     });
+
+    let calendarEventId = meeting.calendarEventId;
+    if (meeting.scheduledAt && meeting.owner && !calendarEventId) {
+      try {
+        const endDate = new Date(new Date(meeting.scheduledAt).getTime() + (meeting.durationMinutes || 60) * 60 * 1000);
+        const calEvent = await CalendarEvent.create({
+          title: meeting.title,
+          description: meeting.notes,
+          type: "meeting",
+          startAt: meeting.scheduledAt,
+          endAt: endDate,
+          allDay: false,
+          status: "scheduled",
+          owner: meeting.owner,
+          visibility: "team",
+          relatedTo: meeting._id,
+          relatedToModel: "Meeting",
+        });
+        calendarEventId = calEvent._id;
+        await Meeting.findByIdAndUpdate(meeting._id, { calendarEventId: calEvent._id });
+      } catch (e) {
+        console.error("[calendar] Failed to create calendar event for meeting:", e.message);
+      }
+    }
+
     const populated = await meeting.populate([{ path: "owner", select: "name email" }, { path: "participants", select: "name email" }]);
     logActivity({ auth, request, action: "meeting_create", entity: "meeting", entityId: meeting._id, entityLabel: title.trim() });
-    return withCors(Response.json({ meeting: populated }, { status: 201 }));
+    const meetingObj = populated.toObject ? populated.toObject() : populated;
+    if (calendarEventId) meetingObj.calendarEventId = calendarEventId;
+    return withCors(Response.json({ meeting: meetingObj }, { status: 201 }));
   } catch (e) { console.error(e); return withCors(Response.json({ error: "Something went wrong." }, { status: 500 })); }
 }
 
